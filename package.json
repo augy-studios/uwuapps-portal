@@ -1,0 +1,9 @@
+{
+  "name": "uwuapps-portal",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.103.0",
+    "bcryptjs": "^3.0.3"
+  }
+}
