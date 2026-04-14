@@ -26,7 +26,7 @@
     "display": "standalone",
     "display_override": ["fullscreen", "minimal-ui", "window-controls-overlay"],
     "orientation": "portrait-primary",
-    "id": "template",
+    "id": "uwusuite",
     "dir": "ltr",
     "scope": "/",
     "lang": "en",
