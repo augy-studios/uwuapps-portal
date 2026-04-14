@@ -3,10 +3,16 @@
     "short_name": "UwU Suite",
     "description": "The official homepage for all UwU Apps web apps, all under one roof!",
     "icons": [{
-        "src": "templateicon1.png",
-        "type": "image/png",
-        "sizes": "512x512"
-    }],
+            "src": "UUS-512.png",
+            "type": "image/png",
+            "sizes": "512x512"
+        },
+        {
+            "src": "UUS-192.png",
+            "type": "image/png",
+            "sizes": "192x192"
+        }
+    ],
     "screenshots": [{
             "src": "/images/screenshot_1.png",
             "type": "image/png",
