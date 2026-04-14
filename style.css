@@ -640,6 +640,12 @@ body {
 }
 
 /* ── User menu / avatar / dropdown */
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+
 .avatar-wrap {
   position: relative;
 }
