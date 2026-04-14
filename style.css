@@ -775,6 +775,7 @@ body {
   max-height: 90vh;
   overflow-y: auto;
   animation: slideUp .25s cubic-bezier(.34, 1.56, .64, 1);
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .modal-large {
