@@ -20,14 +20,14 @@
     <link rel="manifest" href="/manifest.json" />
 
     <meta charset="utf-8">
-    <title>Template | UwU Apps</title>
+    <title>UwU Suite | UwU Apps</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="A simple template app; view live template at a glance!">
+    <meta name="description" content="The official homepage for all uwuapps.org web apps, all under one roof!" />
 
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Template | UwU Apps" />
+    <meta property="og:title" content="UwU Suite | UwU Apps" />
     <meta property="og:site_name" content="UwU Apps" />
-    <meta property="og:description" content="A simple template app; view live template at a glance!" />
+    <meta property="og:description" content="The official homepage for all uwuapps.org web apps, all under one roof!" />
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Jua">
     <link rel="stylesheet" href="/style.css">
@@ -46,16 +46,354 @@
 </head>
 
 <body>
-    Template
+    <div class="noise"></div>
+
+    <!-- ── Header ── -->
+    <header class="site-header glass-card">
+        <div class="header-inner">
+            <div class="logo">
+                <span class="logo-mark">UwU</span>
+                <span class="logo-suite">Suite</span>
+            </div>
+            <nav class="header-nav">
+                <button class="btn-icon" id="themeBtn" title="Change theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="4" />
+                        <path
+                            d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32 1.41-1.41" />
+                        </svg>
+                </button>
+                <button class="btn btn-ghost" id="loginBtn">Log in</button>
+                <div class="user-menu hidden" id="userMenu">
+                    <button class="btn btn-primary hidden" id="addAppBtn">+ Add App</button>
+                    <div class="avatar-wrap" id="avatarWrap">
+                        <div class="avatar" id="userAvatar">U</div>
+                        <div class="dropdown" id="userDropdown">
+                            <div class="dropdown-header">
+                                <span id="dropdownName">User</span>
+                                <span class="role-badge" id="dropdownRole">pending</span>
+                            </div>
+                            <hr />
+                            <button class="dropdown-item hidden" id="adminPanelBtn">⚙️ Admin Panel</button>
+                            <button class="dropdown-item" id="logoutBtn">🚪 Log out</button>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- ── Hero ── -->
+    <section class="hero">
+        <h1 class="hero-title">UwU Suite</h1>
+        <p class="hero-subtitle">All your favourite web apps, in one cosy corner of the internet 🐾</p>
+    </section>
+
+    <!-- ── Controls ── -->
+    <section class="controls-bar">
+        <div class="search-wrap">
+            <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" /></svg>
+            <input class="search-input" id="searchInput" type="search" placeholder="Search apps…" autocomplete="off" />
+        </div>
+        <div class="filter-wrap">
+            <div class="filter-group">
+                <span class="filter-label">Tag:</span>
+                <button class="filter-pill active" data-filter="tag" data-value="">All</button>
+                <button class="filter-pill" data-filter="tag" data-value="tools">🔧 Tools</button>
+                <button class="filter-pill" data-filter="tag" data-value="games">🎮 Games</button>
+                <button class="filter-pill" data-filter="tag" data-value="bots">🤖 Bots</button>
+            </div>
+            <div class="filter-group">
+                <span class="filter-label">Sort:</span>
+                <select class="sort-select" id="sortSelect">
+                    <option value="sort_order">Default</option>
+                    <option value="title_asc">A → Z</option>
+                    <option value="title_desc">Z → A</option>
+                    <option value="newest">Newest</option>
+                    <option value="oldest">Oldest</option>
+                </select>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── App Grid ── -->
+    <main class="app-grid" id="appGrid">
+        <div class="grid-skeleton" id="gridSkeleton">
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+        </div>
+        <div class="no-results hidden" id="noResults">
+            <span>🐾</span>
+            <p>No apps found. Try a different search!</p>
+        </div>
+    </main>
+
+    <footer class="site-footer">
+        <p>UwU Suite &copy; <span id="footerYear"></span> uwuapps.org &nbsp;·&nbsp; Made with 💚</p>
+    </footer>
+
+    <!-- ═══ MODALS ═══ -->
+
+    <!-- Theme Picker -->
+    <div class="modal-backdrop hidden" id="themeModal">
+        <div class="modal glass-card">
+            <div class="modal-header">
+                <h2>Pick a Theme 🎨</h2>
+                <button class="btn-icon modal-close" data-modal="themeModal">✕</button>
+            </div>
+            <div class="theme-grid">
+                <button class="theme-swatch active" data-theme="classic" style="--swatch:#ccffcc"><span
+                        class="swatch-dot"></span><span>Classic</span></button>
+                <button class="theme-swatch" data-theme="notgreen1" style="--swatch:#ffcccc"><span
+                        class="swatch-dot"></span><span>Not Green 1</span></button>
+                <button class="theme-swatch" data-theme="notgreen2" style="--swatch:#ccccff"><span
+                        class="swatch-dot"></span><span>Not Green 2</span></button>
+                <button class="theme-swatch" data-theme="notgreen3" style="--swatch:#ffffcc"><span
+                        class="swatch-dot"></span><span>Not Green 3</span></button>
+                <button class="theme-swatch" data-theme="notgreen4" style="--swatch:#ffccff"><span
+                        class="swatch-dot"></span><span>Not Green 4</span></button>
+                <button class="theme-swatch" data-theme="notgreen5" style="--swatch:#ccffff"><span
+                        class="swatch-dot"></span><span>Not Green 5</span></button>
+                <button class="theme-swatch" data-theme="ultralight"
+                    style="--swatch:#f8fff8;border:1px solid #ddd"><span class="swatch-dot"></span><span>Really Really
+                        Light Green</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div class="modal-backdrop hidden" id="authModal">
+        <div class="modal glass-card">
+            <div class="modal-header">
+                <h2 id="authModalTitle">Log in</h2>
+                <button class="btn-icon modal-close" data-modal="authModal">✕</button>
+            </div>
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">Log in</button>
+                <button class="auth-tab" data-tab="register">Register</button>
+            </div>
+            <form class="auth-form" id="authForm" novalidate>
+                <div id="registerFields" class="hidden">
+                    <label>Username *
+                        <input type="text" id="authUsername" placeholder="your_username" autocomplete="username" />
+                    </label>
+                    <label>Display Name
+                        <input type="text" id="authName" placeholder="Your Name" autocomplete="name" />
+                    </label>
+                </div>
+                <label>Email *
+                    <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email" required />
+                </label>
+                <label>Password *
+                    <input type="password" id="authPassword" placeholder="Min. 8 characters"
+                        autocomplete="current-password" required />
+                </label>
+                <div class="auth-error hidden" id="authError"></div>
+                <button type="submit" class="btn btn-primary btn-full" id="authSubmit">Log in</button>
+            </form>
+            <p class="auth-footnote" id="authFootnote">
+                New here? <button class="link-btn" data-tab="register">Create an account</button><br />
+                <small>New accounts require admin approval before you can contribute.</small>
+            </p>
+        </div>
+    </div>
+
+    <!-- App Detail Modal -->
+    <div class="modal-backdrop hidden" id="appModal">
+        <div class="modal modal-large glass-card">
+            <div class="modal-header">
+                <h2 id="appModalTitle">App Name</h2>
+                <button class="btn-icon modal-close" data-modal="appModal">✕</button>
+            </div>
+            <div class="app-modal-body">
+                <div class="app-gallery">
+                    <div class="gallery-main">
+                        <img id="galleryMainImg" src="" alt="" style="transition:opacity .2s" />
+                    </div>
+                    <div class="gallery-thumbs" id="galleryThumbs"></div>
+                </div>
+                <div class="app-modal-info">
+                    <p class="app-modal-desc" id="appModalDesc"></p>
+                    <div class="app-modal-meta">
+                        <div class="pill-row" id="appModalTld"></div>
+                        <div class="pill-row" id="appModalTags"></div>
+                    </div>
+                    <a class="btn btn-primary btn-full" id="appModalLink" href="#" target="_blank" rel="noopener">Open
+                        App →</a>
+                    <div class="app-modal-actions hidden" id="appModalActions">
+                        <button class="btn btn-ghost" id="editAppBtn">✏️ Edit</button>
+                        <button class="btn btn-danger" id="deleteAppBtn">🗑️ Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit App Modal -->
+    <div class="modal-backdrop hidden" id="editModal">
+        <div class="modal modal-large glass-card">
+            <div class="modal-header">
+                <h2 id="editModalTitle">Add App</h2>
+                <button class="btn-icon modal-close" data-modal="editModal">✕</button>
+            </div>
+            <form class="edit-form" id="editForm" novalidate>
+                <div class="form-row">
+                    <label class="form-col">Title *
+                        <input type="text" id="editTitle" placeholder="My Awesome App" required />
+                    </label>
+                    <label class="form-col">URL *
+                        <input type="url" id="editUrl" placeholder="https://app.uwuapps.org" required />
+                    </label>
+                </div>
+                <label>Description
+                    <textarea id="editDesc" rows="3" placeholder="What does this app do?"></textarea>
+                </label>
+                <fieldset class="tag-fieldset">
+                    <legend>Tags</legend>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label"><input type="checkbox" name="tag" value="tools" /> 🔧
+                            Tools</label>
+                        <label class="checkbox-label"><input type="checkbox" name="tag" value="games" /> 🎮
+                            Games</label>
+                        <label class="checkbox-label"><input type="checkbox" name="tag" value="bots" /> 🤖 Bots</label>
+                    </div>
+                </fieldset>
+                <div class="upload-section">
+                    <div class="upload-label">Images <small>(pick one as cover thumbnail)</small></div>
+                    <div class="drop-zone" id="dropZone">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" /></svg>
+                        <p>Drag & drop images or <button type="button" class="link-btn" id="browseBtn">browse</button>
+                        </p>
+                        <p class="drop-hint">PNG, JPG, GIF — auto-converted to WebP</p>
+                        <input type="file" id="imageFileInput" accept="image/*" multiple hidden />
+                    </div>
+                    <div class="gallery-picker" id="galleryPicker"></div>
+                </div>
+                <div class="form-row form-row-end">
+                    <label class="toggle-label">
+                        <input type="checkbox" id="editPublished" />
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        Published
+                    </label>
+                    <div class="edit-error hidden" id="editError"></div>
+                    <button type="submit" class="btn btn-primary" id="editSubmit">Save App</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Panel Modal -->
+    <div class="modal-backdrop hidden" id="adminModal">
+        <div class="modal modal-large glass-card">
+            <div class="modal-header">
+                <h2>Admin Panel ⚙️</h2>
+                <button class="btn-icon modal-close" data-modal="adminModal">✕</button>
+            </div>
+            <div class="admin-tabs">
+                <button class="admin-tab active" data-panel="Pending">⏳ Pending</button>
+                <button class="admin-tab" data-panel="Users">👥 Users</button>
+                <button class="admin-tab" data-panel="Preapproved">✅ Pre-approve</button>
+            </div>
+
+            <div class="admin-panel active" id="panelPending">
+                <table class="user-table" id="pendingTable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <p class="table-empty hidden" id="pendingEmpty">No pending users 🎉</p>
+            </div>
+
+            <div class="admin-panel" id="panelUsers">
+                <table class="user-table" id="usersTable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <p class="table-empty hidden" id="usersEmpty">No approved users yet.</p>
+            </div>
+
+            <div class="admin-panel" id="panelPreapproved">
+                <form class="preapprove-form" id="preapproveForm">
+                    <div class="form-row" style="align-items:flex-end">
+                        <input type="email" id="preapproveEmail" placeholder="email@example.com" required
+                            style="flex:1;padding:.65rem .9rem;border-radius:10px;border:1px solid var(--glass-border);background:rgba(255,255,255,.6);font-family:inherit;font-size:.9rem;color:var(--text-primary);outline:none;" />
+                        <select id="preapproveRole"
+                            style="padding:.65rem .9rem;border-radius:10px;border:1px solid var(--glass-border);background:rgba(255,255,255,.6);font-family:inherit;font-size:.9rem;color:var(--text-secondary);">
+                            <option value="editor">Editor</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary">Pre-approve</button>
+                    </div>
+                    <p style="font-size:.78rem;color:var(--text-muted);margin-top:.5rem">
+                        If the email is already registered, the user is approved immediately. Otherwise they are
+                        auto-approved when they register.
+                    </p>
+                </form>
+                <table class="user-table" id="preapprovedTable" style="margin-top:1rem">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <p class="table-empty hidden" id="preapprovedEmpty">No pre-approvals yet.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirm -->
+    <div class="modal-backdrop hidden" id="confirmModal">
+        <div class="modal modal-sm glass-card">
+            <div class="modal-header">
+                <h2>Delete App?</h2>
+                <button class="btn-icon modal-close" data-modal="confirmModal">✕</button>
+            </div>
+            <p style="margin:0 0 1.5rem">This cannot be undone.</p>
+            <div style="display:flex;gap:.75rem;justify-content:flex-end">
+                <button class="btn btn-ghost modal-close" data-modal="confirmModal">Cancel</button>
+                <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast hidden" id="toast"></div>
 
     <script src="/script.js"></script>
 
     <script>
         if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('/sw.js');
+            navigator.serviceWorker.register('/sw.js');
         }
     </script>
-    
+
 </body>
 
 </html>

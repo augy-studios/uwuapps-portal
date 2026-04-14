@@ -1,7 +1,7 @@
 {
-    "name": "Template by UwU Apps",
-    "short_name": "UwU Template",
-    "description": "A simple template app; view live template at a glance!",
+    "name": "UwU Suite by UwU Apps",
+    "short_name": "UwU Suite",
+    "description": "The official homepage for all uwuapps.org web apps, all under one roof!",
     "icons": [{
         "src": "templateicon1.png",
         "type": "image/png",
