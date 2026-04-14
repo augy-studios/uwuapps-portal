@@ -131,12 +131,12 @@ export default async function handler(req, res) {
             // ── Login ─────────────────────────────────────────
             case 'login': {
                 const {
-                    email,
+                    username,
                     password
                 } = req.body;
-                if (!email || !password) throw {
+                if (!username || !password) throw {
                     status: 400,
-                    message: 'Email and password required'
+                    message: 'Username and password required'
                 };
 
                 const {
@@ -144,7 +144,7 @@ export default async function handler(req, res) {
                 } = await supabase
                     .from('uwusuite_users')
                     .select('*')
-                    .eq('email', email.toLowerCase())
+                    .eq('username', username.toLowerCase())
                     .single();
 
                 if (!user) throw {

@@ -223,6 +223,8 @@ function setAuthMode(mode) {
     $('authModalTitle').textContent = mode === 'login' ? 'Log in' : 'Register';
     $('authSubmit').textContent = mode === 'login' ? 'Log in' : 'Create account';
     $('registerFields').classList.toggle('hidden', mode !== 'register');
+    $('authEmailLabel').classList.toggle('hidden', mode !== 'register');
+    $('authLoginUsernameLabel').classList.toggle('hidden', mode !== 'login');
     $('authPassword').autocomplete = mode === 'login' ? 'current-password' : 'new-password';
     $('authError').classList.add('hidden');
     document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === mode));
@@ -248,6 +250,7 @@ $('authForm').addEventListener('submit', async e => {
     submitBtn.disabled = true;
 
     const email = $('authEmail').value.trim();
+    const loginUsername = $('authLoginUsername').value.trim();
     const password = $('authPassword').value;
     const username = $('authUsername')?.value.trim();
     const displayName = $('authName')?.value.trim();
@@ -273,7 +276,7 @@ $('authForm').addEventListener('submit', async e => {
                 method: 'POST',
                 body: {
                     action: 'login',
-                    email,
+                    username: loginUsername,
                     password
                 }
             });
@@ -286,7 +289,7 @@ $('authForm').addEventListener('submit', async e => {
 
             if (window.PasswordCredential) {
                 try {
-                    const cred = new PasswordCredential({ id: email, password });
+                    const cred = new PasswordCredential({ id: loginUsername, password });
                     await navigator.credentials.store(cred);
                 } catch (_) {}
             }
