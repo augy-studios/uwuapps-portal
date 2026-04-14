@@ -223,6 +223,7 @@ function setAuthMode(mode) {
     $('authModalTitle').textContent = mode === 'login' ? 'Log in' : 'Register';
     $('authSubmit').textContent = mode === 'login' ? 'Log in' : 'Create account';
     $('registerFields').classList.toggle('hidden', mode !== 'register');
+    $('authPassword').autocomplete = mode === 'login' ? 'current-password' : 'new-password';
     $('authError').classList.add('hidden');
     document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === mode));
 
@@ -282,6 +283,13 @@ $('authForm').addEventListener('submit', async e => {
                 user: res.user
             });
             currentUser = res.user;
+
+            if (window.PasswordCredential) {
+                try {
+                    const cred = new PasswordCredential({ id: email, password });
+                    await navigator.credentials.store(cred);
+                } catch (_) {}
+            }
 
             if (!currentUser.isApproved) {
                 showToast('Your account is pending admin approval', 5000);

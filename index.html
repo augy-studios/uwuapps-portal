@@ -179,7 +179,7 @@
                 <button class="auth-tab active" data-tab="login">Log in</button>
                 <button class="auth-tab" data-tab="register">Register</button>
             </div>
-            <form class="auth-form" id="authForm" novalidate>
+            <form class="auth-form" id="authForm" method="post" target="auth-sink" novalidate>
                 <div id="registerFields" class="hidden">
                     <label>Username *
                         <input type="text" id="authUsername" placeholder="your_username" autocomplete="username" />
@@ -383,6 +383,9 @@
     </div>
 
     <div class="toast hidden" id="toast"></div>
+
+    <!-- Absorbs any accidental form navigation so the page never redirects to /# -->
+    <iframe name="auth-sink" style="display:none" aria-hidden="true" tabindex="-1"></iframe>
 
     <script src="/script.js"></script>
 
