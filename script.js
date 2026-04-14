@@ -264,8 +264,8 @@ $('authForm').addEventListener('submit', async e => {
                 }
             });
             showToast(res.message || (res.preapproved ?
-                'Account created! You can log in now 🐾' :
-                'Account created! Awaiting admin approval 🕐'), 5000);
+                'Account created! You can log in now' :
+                'Account created! Awaiting admin approval'), 5000);
             closeModal('authModal');
         } else {
             const res = await apiFetch('/api/auth', {
@@ -284,9 +284,9 @@ $('authForm').addEventListener('submit', async e => {
             currentUser = res.user;
 
             if (!currentUser.isApproved) {
-                showToast('Your account is pending admin approval 🕐', 5000);
+                showToast('Your account is pending admin approval', 5000);
             } else {
-                showToast(`Welcome back, ${currentUser.displayName || currentUser.username}! 🐾`);
+                showToast(`Welcome back, ${currentUser.displayName || currentUser.username}!`);
             }
             closeModal('authModal');
             renderAuthUi();
@@ -315,7 +315,7 @@ $('logoutBtn').addEventListener('click', async () => {
     $('userDropdown').classList.remove('open');
     renderAuthUi();
     await loadApps();
-    showToast('Logged out 👋');
+    showToast('Logged out');
 });
 
 $('avatarWrap').addEventListener('click', e => {
@@ -334,7 +334,7 @@ async function loadApps() {
         const res = await apiFetch('/api/apps');
         allApps = res.apps || [];
     } catch (_) {
-        showToast('Failed to load apps 😢');
+        showToast('Failed to load apps');
         allApps = [];
     }
 
@@ -373,7 +373,7 @@ function buildAppCard(app, i) {
     card.innerHTML = `
     ${app.thumbnail_url
       ? `<img class="app-card-thumb" src="${escHtml(app.thumbnail_url)}" alt="${escHtml(app.title)}" loading="lazy" />`
-      : `<div class="app-card-thumb-placeholder">🐾</div>`}
+      : `<div class="app-card-thumb-placeholder"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="opacity:.4"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`}
     <div class="app-card-body">
       <h3 class="app-card-title">${escHtml(app.title)}</h3>
       ${app.description ? `<p class="app-card-desc">${escHtml(app.description)}</p>` : ''}
@@ -505,7 +505,7 @@ function renderGalleryPicker() {
     galleryUrls.forEach((url, idx) => {
         const item = document.createElement('div');
         item.className = `picker-item ${idx === selectedThumbIndex ? 'selected' : ''}`;
-        item.innerHTML = `<img src="${escHtml(url)}" alt="Image ${idx+1}" /><span class="picker-badge">Cover</span><button type="button" class="picker-remove">✕</button>`;
+        item.innerHTML = `<img src="${escHtml(url)}" alt="Image ${idx+1}" /><span class="picker-badge">Cover</span><button type="button" class="picker-remove" aria-label="Remove"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
         item.addEventListener('click', e => {
             if (e.target.classList.contains('picker-remove')) {
                 galleryUrls.splice(idx, 1);
@@ -524,7 +524,7 @@ function renderGalleryPicker() {
         const url = URL.createObjectURL(file);
         const item = document.createElement('div');
         item.className = `picker-item ${totalIdx === selectedThumbIndex ? 'selected' : ''}`;
-        item.innerHTML = `<img src="${url}" alt="New ${fi+1}" /><span class="picker-badge">Cover</span><button type="button" class="picker-remove">✕</button>`;
+        item.innerHTML = `<img src="${url}" alt="New ${fi+1}" /><span class="picker-badge">Cover</span><button type="button" class="picker-remove" aria-label="Remove"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
         item.addEventListener('click', e => {
             if (e.target.classList.contains('picker-remove')) {
                 galleryFiles.splice(fi, 1);
@@ -662,7 +662,7 @@ $('confirmDeleteBtn').addEventListener('click', async () => {
         pendingDeleteId = null;
         closeModal('confirmModal');
         closeModal('appModal');
-        showToast('App deleted 🗑️');
+        showToast('App deleted');
         await loadApps();
     } catch (e) {
         showToast('Delete failed: ' + e.message);
@@ -751,7 +751,7 @@ function renderPreapprovedTable(rows) {
         tr.innerHTML = `
       <td>${escHtml(r.email)}</td>
       <td><span class="role-badge">${escHtml(r.preapproved_role)}</span></td>
-      <td>${r.activated_at ? '✅ Activated' : '⏳ Pending'}</td>
+      <td>${r.activated_at ? '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg> Activated' : '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Pending'}</td>
       <td style="padding:.65rem .75rem">
         ${!r.activated_at ? `<button class="btn btn-danger" style="font-size:.75rem;padding:.3rem .7rem" data-prid="${r.id}" data-action="remove-preapproval">Remove</button>` : '—'}
       </td>`;
