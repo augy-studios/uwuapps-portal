@@ -170,7 +170,7 @@ html {
 }
 
 body {
-  font-family: 'Nunito', 'Jua', sans-serif;
+  font-family: 'Jua', sans-serif;
   background-color: var(--bg-base);
   color: var(--text-primary);
   min-height: 100vh;
@@ -179,34 +179,6 @@ body {
   position: relative;
 }
 
-/* ── Ambient background orbs */
-body::before,
-body::after {
-  content: '';
-  position: fixed;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: .55;
-  pointer-events: none;
-  z-index: 0;
-  transition: background .4s;
-}
-
-body::before {
-  width: 520px;
-  height: 520px;
-  background: var(--bg-orb1);
-  top: -120px;
-  left: -120px;
-}
-
-body::after {
-  width: 400px;
-  height: 400px;
-  background: var(--bg-orb2);
-  bottom: 60px;
-  right: -100px;
-}
 
 /* ── Noise texture */
 .noise {
@@ -456,7 +428,7 @@ body::after {
   align-items: center;
   justify-content: center;
   font-size: 2.5rem;
-  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+  background: var(--brand);
 }
 
 .app-card-body {
@@ -545,9 +517,7 @@ body::after {
 .skeleton-card {
   border-radius: 18px;
   height: 280px;
-  background: linear-gradient(90deg, var(--brand) 25%, var(--brand-dark) 50%, var(--brand) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.6s infinite;
+  background: var(--brand);
   opacity: .35;
 }
 
