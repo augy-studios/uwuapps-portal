@@ -500,6 +500,12 @@ body {
   color: #005a8a;
 }
 
+.pill.pill-singapore {
+  background: rgba(255, 100, 100, .2);
+  border-color: rgba(220, 50, 50, .5);
+  color: #8a0000;
+}
+
 .pill.pill-draft {
   background: rgba(200, 200, 200, .2);
   border-color: rgba(160, 160, 160, .5);

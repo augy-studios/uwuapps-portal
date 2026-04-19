@@ -110,7 +110,8 @@ function tagClass(tag) {
     return {
         tools: 'pill-tools',
         games: 'pill-games',
-        bots: 'pill-bots'
+        bots: 'pill-bots',
+        singapore: 'pill-singapore'
     } [tag] || '';
 }
 
