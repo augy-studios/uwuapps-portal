@@ -1,5 +1,7 @@
 // api/apps.js
 
+const ALLOWED_TAGS = ['tools', 'games', 'bots', 'singapore'];
+
 import {
     supabase,
     resolveSession,
@@ -69,6 +71,10 @@ export default async function handler(req, res) {
                 const gallery = Array.isArray(galleryUrls) ? galleryUrls : [];
                 const thumbIdx = Math.max(0, Math.min(parseInt(thumbnailIndex) || 0, gallery.length - 1));
 
+                const tagList = Array.isArray(tags) ? tags : [];
+                const invalidTags = tagList.filter(t => !ALLOWED_TAGS.includes(t));
+                if (invalidTags.length > 0) return err(res, 400, `Invalid tags: ${invalidTags.join(', ')}`);
+
                 const {
                     data,
                     error
@@ -78,7 +84,7 @@ export default async function handler(req, res) {
                         title,
                         url,
                         description: description || null,
-                        tags: Array.isArray(tags) ? tags : [],
+                        tags: tagList,
                         gallery_urls: gallery,
                         thumbnail_url: gallery[thumbIdx] || null,
                         thumbnail_index: thumbIdx,
@@ -145,7 +151,12 @@ export default async function handler(req, res) {
                 if (title !== undefined) patch.title = title;
                 if (url !== undefined) patch.url = url;
                 if (description !== undefined) patch.description = description || null;
-                if (tags !== undefined) patch.tags = Array.isArray(tags) ? tags : [];
+                if (tags !== undefined) {
+                    const tagList = Array.isArray(tags) ? tags : [];
+                    const invalid = tagList.filter(t => !ALLOWED_TAGS.includes(t));
+                    if (invalid.length > 0) return err(res, 400, `Invalid tags: ${invalid.join(', ')}`);
+                    patch.tags = tagList;
+                }
                 if (published !== undefined) patch.published = !!published;
                 if (sortOrder !== undefined) patch.sort_order = sortOrder;
 
