@@ -342,6 +342,7 @@ body {
   display: flex;
   align-items: center;
   gap: .4rem;
+  flex-wrap: wrap;
 }
 
 .filter-label {
@@ -406,6 +407,24 @@ body {
   cursor: pointer;
   transition: transform .25s cubic-bezier(.34, 1.56, .64, 1), box-shadow .25s;
   animation: fadeInUp .4s ease both;
+  position: relative;
+}
+
+.app-card-new-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: #e00;
+  color: #fff;
+  font-size: .62rem;
+  font-weight: 700;
+  padding: .18rem .45rem;
+  border-radius: 6px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  z-index: 1;
+  box-shadow: 0 2px 6px rgba(0,0,0,.3);
+  pointer-events: none;
 }
 
 .app-card:hover {
@@ -910,6 +929,7 @@ body {
 .auth-form input,
 .edit-form input[type="text"],
 .edit-form input[type="url"],
+.edit-form input[type="date"],
 .edit-form textarea {
   padding: .65rem .9rem;
   border-radius: 10px;

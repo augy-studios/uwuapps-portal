@@ -30,7 +30,7 @@ export default async function handler(req, res) {
             id, title, description, url, tld, tags,
             thumbnail_url, gallery_urls, thumbnail_index,
             published, sort_order, access_count,
-            created_by, created_at, updated_at
+            created_by, created_at, updated_at, published_date
           `);
 
                 if (!canSeeAll) query = query.eq('published', true);
@@ -60,7 +60,8 @@ export default async function handler(req, res) {
                     galleryUrls,
                     thumbnailIndex,
                     published,
-                    sortOrder
+                    sortOrder,
+                    publishedDate
                 } = req.body || {};
 
                 if (!title || !url) throw {
@@ -90,6 +91,7 @@ export default async function handler(req, res) {
                         thumbnail_index: thumbIdx,
                         published: !!published,
                         sort_order: typeof sortOrder === 'number' ? sortOrder : 0,
+                        published_date: publishedDate || null,
                         created_by: user.id,
                         updated_by: user.id
                     })
@@ -142,7 +144,8 @@ export default async function handler(req, res) {
                     galleryUrls,
                     thumbnailIndex,
                     published,
-                    sortOrder
+                    sortOrder,
+                    publishedDate
                 } = req.body || {};
 
                 const patch = {
@@ -159,6 +162,7 @@ export default async function handler(req, res) {
                 }
                 if (published !== undefined) patch.published = !!published;
                 if (sortOrder !== undefined) patch.sort_order = sortOrder;
+                if (publishedDate !== undefined) patch.published_date = publishedDate || null;
 
                 if (galleryUrls !== undefined) {
                     const gallery = Array.isArray(galleryUrls) ? galleryUrls : [];
