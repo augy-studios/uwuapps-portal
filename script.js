@@ -365,8 +365,8 @@ function applyFilters() {
 
     if (activeSort === 'title_asc') filteredApps.sort((a, b) => a.title.localeCompare(b.title));
     if (activeSort === 'title_desc') filteredApps.sort((a, b) => b.title.localeCompare(a.title));
-    if (activeSort === 'newest') filteredApps.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    if (activeSort === 'oldest') filteredApps.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    if (activeSort === 'newest') filteredApps.sort((a, b) => new Date(b.published_date || b.created_at) - new Date(a.published_date || a.created_at));
+    if (activeSort === 'oldest') filteredApps.sort((a, b) => new Date(a.published_date || a.created_at) - new Date(b.published_date || b.created_at));
     if (activeSort === 'sort_order') filteredApps.sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999));
 
     document.querySelectorAll('.app-card').forEach(c => c.remove());
@@ -381,8 +381,12 @@ function buildAppCard(app, i) {
 
     const tld = app.tld || extractTld(app.url);
     const tags = app.tags || [];
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const appDate = new Date(app.published_date || app.created_at);
+    const isNew = app.published_date || app.created_at ? appDate >= sevenDaysAgo : false;
 
     card.innerHTML = `
+    ${isNew ? '<span class="app-card-new-badge">NEW</span>' : ''}
     ${app.thumbnail_url
       ? `<img class="app-card-thumb" src="${escHtml(app.thumbnail_url)}" alt="${escHtml(app.title)}" loading="lazy" />`
       : `<div class="app-card-thumb-placeholder"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="opacity:.4"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`}
@@ -474,6 +478,7 @@ function openEditModal(app) {
     $('editUrl').value = app?.url || '';
     $('editDesc').value = app?.description || '';
     $('editPublished').checked = app?.published ?? false;
+    $('editPublishedDate').value = app?.published_date ? app.published_date.split('T')[0] : '';
     document.querySelectorAll('[name="tag"]').forEach(cb => cb.checked = (app?.tags || []).includes(cb.value));
     galleryFiles = [];
     galleryUrls = app?.gallery_urls ? [...app.gallery_urls] : [];
@@ -634,7 +639,8 @@ $('editForm').addEventListener('submit', async e => {
             tags,
             galleryUrls: finalGallery,
             thumbnailIndex: thumbIdx,
-            published: $('editPublished').checked
+            published: $('editPublished').checked,
+            publishedDate: $('editPublishedDate').value || null
         };
 
         if (editingAppId) {
