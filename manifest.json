@@ -38,7 +38,7 @@
         "url": "https://play.google.com/store/apps/details?id=org.uwuapps.portal",
         "id": "org.uwuapps.portal"
     }],
-    "prefer_related_applications": false,
+    "prefer_related_applications": true,
     "dir": "ltr",
     "scope": "/",
     "lang": "en",
