@@ -32,7 +32,13 @@
     "display": "standalone",
     "display_override": ["fullscreen", "minimal-ui", "window-controls-overlay"],
     "orientation": "portrait-primary",
-    "id": "uwusuite",
+    "id": "org.uwuapps.portal",
+    "related_applications": [{
+        "platform": "play",
+        "url": "https://play.google.com/store/apps/details?id=org.uwuapps.portal",
+        "id": "org.uwuapps.portal"
+    }],
+    "prefer_related_applications": false,
     "dir": "ltr",
     "scope": "/",
     "lang": "en",
