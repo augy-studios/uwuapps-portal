@@ -3,6 +3,6 @@
       "target": {
         "namespace": "android_app",
         "package_name": "org.uwuapps.portal",
-        "sha256_cert_fingerprints": ["E4:EB:13:B6:CA:2A:9E:89:E4:8B:3C:AB:68:2B:BF:6A:99:97:09:A5:2A:9A:36:20:8C:8C:A9:94:9B:08:CB:51"]
+        "sha256_cert_fingerprints": ["05:07:83:04:0C:3D:C4:40:D7:9B:16:F3:59:7B:27:09:B3:CF:1B:B5:67:9E:75:B2:05:88:E5:05:93:D4:76:7F"]
       }
     }]
