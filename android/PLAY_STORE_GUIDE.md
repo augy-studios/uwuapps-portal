@@ -13,41 +13,56 @@ Bubblewrap lets you set **`minSdkVersion: 21` (Android 5.0 Lollipop)**, covering
 
 ---
 
-## Prerequisites (Debian VPS — headless)
+## Prerequisites (Debian 13 "trixie" VPS — headless)
 
-### 1. Node.js 20 LTS
+### 1. System packages
+
+```bash
+sudo apt update
+sudo apt install -y wget unzip curl git openjdk-21-jdk
+```
+
+Debian 13 ships OpenJDK 21 as default. Verify:
+
+```bash
+java -version   # should print openjdk 21...
+```
+
+### 2. Node.js 20 LTS (via NodeSource)
 
 ```bash
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
-```
-
-### 2. Java JDK 17
-
-```bash
-sudo apt install -y openjdk-17-jdk
+node --version   # v20.x.x
 ```
 
 ### 3. Android SDK command-line tools (no Android Studio needed)
 
 ```bash
-# Install dependencies
-sudo apt install -y wget unzip
-
-# Download cmdline-tools
+# Create SDK directory
 mkdir -p ~/android/cmdline-tools
+
+# Download the latest Linux cmdline-tools from Google
+# Check https://developer.android.com/studio#command-tools for the current zip URL
 cd ~/android/cmdline-tools
 wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
 unzip commandlinetools-linux-*.zip
-mv cmdline-tools latest   # sdkmanager expects this layout
+mv cmdline-tools latest   # sdkmanager requires this exact layout
 rm commandlinetools-linux-*.zip
+```
 
-# Add to your shell profile (~/.bashrc or ~/.profile)
+Add to `~/.bashrc` (or `~/.profile`):
+
+```bash
+export JAVA_HOME="/usr/lib/jvm/java-21-openjdk-amd64"
 export ANDROID_SDK_ROOT="$HOME/android"
 export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
-source ~/.bashrc
+```
 
-# Accept licences and install build tools
+Then reload and install SDK components:
+
+```bash
+source ~/.bashrc
 yes | sdkmanager --licenses
 sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
 ```
@@ -74,12 +89,28 @@ DOMAIN=portal.uwuapps.org bash android/build.sh apk
 
 ## Step 2 — First-time Bubblewrap setup
 
+Run `bubblewrap doctor` once to write its config file (`~/.bubblewrap/config.json`):
+
 ```bash
-# Point Bubblewrap at your SDK (run once — answer the prompts or pass flags)
 bubblewrap doctor
-# JAVA_HOME  →  /usr/lib/jvm/java-17-openjdk-amd64
-# ANDROID_SDK_ROOT  →  /home/<you>/android
+# When prompted:
+#   JAVA_HOME        →  /usr/lib/jvm/java-21-openjdk-amd64
+#   ANDROID_SDK_ROOT →  /home/<you>/android
 ```
+
+Or skip the interactive prompts by writing the config directly:
+
+```bash
+mkdir -p ~/.bubblewrap
+cat > ~/.bubblewrap/config.json <<'EOF'
+{
+  "jdkPath": "/usr/lib/jvm/java-21-openjdk-amd64",
+  "androidSdkPath": "/home/<you>/android"
+}
+EOF
+```
+
+Replace `<you>` with your actual username (`whoami`).
 
 ---
 

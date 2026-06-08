@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 # Bubblewrap TWA build script for UwU Suite
+# Target platform: Debian 13 (trixie) VPS — headless, no Android Studio
 # Run from the android/ directory: bash build.sh [apk|aab|both]
 set -euo pipefail
+
+# Debian 13 defaults — override via env if your paths differ
+export JAVA_HOME="${JAVA_HOME:-/usr/lib/jvm/java-21-openjdk-amd64}"
+export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$HOME/android}"
+export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
 
 DOMAIN="${DOMAIN:-uwuapps.org}"
 OUTPUT="${1:-apk}"
@@ -11,7 +17,8 @@ check_deps() {
     command -v "$cmd" &>/dev/null || { echo "Missing: $cmd"; exit 1; }
   done
   node --version | grep -qE "v(18|20|22)" || echo "Warning: Node 18/20/22 recommended"
-  java -version 2>&1 | grep -qE "version \"(11|17|21)" || echo "Warning: Java 11/17/21 recommended"
+  java -version 2>&1 | grep -qE "version \"(17|21)" || echo "Warning: Java 17 or 21 required (Debian 13 ships openjdk-21)"
+  [ -d "$ANDROID_SDK_ROOT/build-tools" ] || echo "Warning: Android SDK build-tools not found at $ANDROID_SDK_ROOT — run: sdkmanager 'build-tools;34.0.0' 'platforms;android-34' 'platform-tools'"
 }
 
 install_bubblewrap() {
