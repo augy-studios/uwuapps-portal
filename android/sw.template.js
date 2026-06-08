@@ -1,16 +1,23 @@
-const CACHE_VERSION = "uwusuite-v2";
+// ============================================================================
+// sw.template.js — Universal PWA Service Worker Template
+// Replace APP_NAME, CACHE_PREFIX, STATIC_ASSETS, and icon paths.
+// Covers: Offline Support, Push Notifications, Background Sync, Periodic Sync
+// ============================================================================
+
+const APP_NAME = "MY_APP";               // ← change this
+const CACHE_VERSION = `${APP_NAME}-v1`;
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const OFFLINE_URL = "/offline.html";
 
+// Files to precache on install
 const STATIC_ASSETS = [
   "/",
   "/index.html",
   "/style.css",
   "/script.js",
-  "/UUS-main.png",
-  "/UUS-512.png",
-  "/UUS-192.png",
+  "/icon-192.png",                       // ← change to your icon paths
+  "/icon-512.png",
   "/favicon.ico",
   "/manifest.json",
   OFFLINE_URL
@@ -42,7 +49,7 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET" || !event.request.url.startsWith("http")) return;
 
-  // API: network-first, graceful JSON error when offline
+  // API routes: network-first, JSON error when offline
   if (event.request.url.includes("/api/")) {
     event.respondWith(
       fetch(event.request).catch(() =>
@@ -55,34 +62,45 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Everything else: cache-first with network update
+  // Everything else: cache-first, network fallback, offline page for HTML
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      const networkFetch = fetch(event.request).then((response) => {
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(DYNAMIC_CACHE).then((cache) => cache.put(event.request, clone));
-        }
-        return response;
-      }).catch(() => {
-        if (event.request.headers.get("Accept")?.includes("text/html")) {
-          return caches.match(OFFLINE_URL);
-        }
-        return new Response("Offline", { status: 503 });
-      });
+      const networkFetch = fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(DYNAMIC_CACHE).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => {
+          if (event.request.headers.get("Accept")?.includes("text/html")) {
+            return caches.match(OFFLINE_URL);
+          }
+          return new Response("Offline", { status: 503 });
+        });
       return cached || networkFetch;
     })
   );
 });
 
 // ─── Push Notifications ───────────────────────────────────────────────────────
+// App-side registration (paste in your main JS):
+//
+//   const reg = await navigator.serviceWorker.ready;
+//   const sub = await reg.pushManager.subscribe({
+//     userVisibleOnly: true,
+//     applicationServerKey: YOUR_VAPID_PUBLIC_KEY  // from web-push library
+//   });
+//   await fetch("/api/push/subscribe", { method: "POST", body: JSON.stringify(sub) });
+
 self.addEventListener("push", (event) => {
   let data = {
-    title: "UwU Suite",
+    title: APP_NAME,
     body: "You have a new notification!",
-    icon: "/UUS-192.png",
-    badge: "/UUS-192.png",
-    tag: "uwuapps-notification"
+    icon: "/icon-192.png",              // ← change to your icon
+    badge: "/icon-192.png",
+    tag: `${APP_NAME}-notification`
   };
 
   if (event.data) {
@@ -121,6 +139,13 @@ self.addEventListener("notificationclick", (event) => {
 });
 
 // ─── Background Sync ──────────────────────────────────────────────────────────
+// App-side usage (queue a failed request, then register sync):
+//
+//   const db = await openSyncDB();
+//   await queueRequest(db, { url: "/api/save", method: "POST", body: JSON.stringify(data) });
+//   const reg = await navigator.serviceWorker.ready;
+//   await reg.sync.register("sync-pending-actions");
+
 self.addEventListener("sync", (event) => {
   if (event.tag === "sync-pending-actions") {
     event.waitUntil(syncPendingActions());
@@ -139,12 +164,19 @@ async function syncPendingActions() {
       });
       await deletePending(db, item.id);
     } catch {
-      // Will be retried on the next sync event
+      // Will retry on next sync — browser handles back-off automatically
     }
   }
 }
 
 // ─── Periodic Sync ────────────────────────────────────────────────────────────
+// App-side registration (call once after SW is active):
+//
+//   const reg = await navigator.serviceWorker.ready;
+//   await reg.periodicSync.register("refresh-content", {
+//     minInterval: 60 * 60 * 1000  // at most once per hour
+//   });
+
 self.addEventListener("periodicsync", (event) => {
   if (event.tag === "refresh-content") {
     event.waitUntil(refreshContent());
@@ -152,6 +184,7 @@ self.addEventListener("periodicsync", (event) => {
 });
 
 async function refreshContent() {
+  // Extend this to fetch any data you want kept fresh
   try {
     const response = await fetch("/");
     if (response.ok) {
@@ -163,10 +196,12 @@ async function refreshContent() {
   }
 }
 
-// ─── IndexedDB helpers (for Background Sync queue) ────────────────────────────
+// ─── IndexedDB helpers (Background Sync queue) ────────────────────────────────
+const DB_NAME = `${APP_NAME}-sync`;
+
 function openDB() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open("uwuapps-sync", 1);
+    const req = indexedDB.open(DB_NAME, 1);
     req.onupgradeneeded = (e) =>
       e.target.result.createObjectStore("pending", { keyPath: "id", autoIncrement: true });
     req.onsuccess = (e) => resolve(e.target.result);
@@ -191,3 +226,6 @@ function deletePending(db, id) {
     req.onerror = () => reject(req.error);
   });
 }
+
+// Exported helper so app-side code can enqueue requests
+// Usage: importScripts not needed — call from app-side script using the same openDB logic

@@ -1,0 +1,53 @@
+{
+  "packageId": "org.uwuapps.portal",
+  "host": "YOUR_DOMAIN",
+  "name": "UwU Suite by UwU Apps",
+  "launcherName": "UwU Suite",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#ccffcc",
+  "themeColorDark": "#ccffcc",
+  "backgroundColor": "#ccffcc",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://YOUR_DOMAIN/UUS-512.png",
+  "maskableIconUrl": "https://YOUR_DOMAIN/UUS-512.png",
+  "monochromeIconUrl": "https://YOUR_DOMAIN/UUS-512.png",
+  "appVersion": "1.0.0",
+  "appVersionCode": 1,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "uwuapps-portal"
+  },
+  "splashScreenFadeOutDuration": 300,
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://YOUR_DOMAIN/",
+  "minSdkVersion": 21,
+  "targetSdkVersion": 34,
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://YOUR_DOMAIN/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {
+    "locationDelegation": {
+      "enabled": false
+    },
+    "playBilling": {
+      "enabled": false
+    },
+    "firstRunFlag": {
+      "enabled": false,
+      "queryParameterName": "firstrun"
+    },
+    "notifications": {
+      "enabled": true
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "retainedBundles": [],
+  "additionalTrustedOrigins": [],
+  "shortcuts": []
+}
