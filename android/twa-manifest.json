@@ -13,8 +13,8 @@
   "iconUrl": "https://uwuapps.org/UUS-512.png",
   "maskableIconUrl": "https://uwuapps.org/UUS-512.png",
   "monochromeIconUrl": "https://uwuapps.org/UUS-512.png",
-  "appVersion": "1.0.0",
-  "appVersionCode": 1,
+  "appVersion": "2.0.0",
+  "appVersionCode": 2,
   "signingKey": {
     "path": "./android.keystore",
     "alias": "uwuapps-portal"
@@ -23,11 +23,11 @@
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
-  "fullScopeUrl": "https://YOUR_DOMAIN/",
+  "fullScopeUrl": "https://uwuapps.org/",
   "minSdkVersion": 21,
   "targetSdkVersion": 34,
   "generatorApp": "bubblewrap-cli",
-  "webManifestUrl": "https://YOUR_DOMAIN/manifest.json",
+  "webManifestUrl": "https://uwuapps.org/manifest.json",
   "fallbackType": "customtabs",
   "features": {
     "locationDelegation": {
