@@ -3,7 +3,7 @@
 # Run from the android/ directory: bash build.sh [apk|aab|both]
 set -euo pipefail
 
-DOMAIN="${DOMAIN:-YOUR_DOMAIN}"
+DOMAIN="${DOMAIN:-uwuapps.org}"
 OUTPUT="${1:-apk}"
 
 check_deps() {
@@ -22,9 +22,9 @@ install_bubblewrap() {
 }
 
 patch_manifest() {
-  # Replace YOUR_DOMAIN placeholder if DOMAIN env var is set
-  if [ "$DOMAIN" != "YOUR_DOMAIN" ]; then
-    sed -i "s/YOUR_DOMAIN/$DOMAIN/g" twa-manifest.json
+  # Patch domain in twa-manifest.json if DOMAIN env var overrides the default
+  if [ "$DOMAIN" != "uwuapps.org" ]; then
+    sed -i "s/uwuapps\.org/$DOMAIN/g" twa-manifest.json
     echo "Patched twa-manifest.json with domain: $DOMAIN"
   fi
 }
