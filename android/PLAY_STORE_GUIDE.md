@@ -13,14 +13,50 @@ Bubblewrap lets you set **`minSdkVersion: 21` (Android 5.0 Lollipop)**, covering
 
 ---
 
-## Prerequisites
+## Prerequisites (Debian VPS — headless)
 
-| Tool | Version | Install |
-|------|---------|---------|
-| Node.js | 18 / 20 / 22 LTS | https://nodejs.org |
-| Java JDK | 11 / 17 / 21 | `sudo apt install openjdk-17-jdk` |
-| Android SDK | latest | Via Android Studio or `sdkmanager` |
-| Bubblewrap CLI | latest | `npm install -g @bubblewrap/cli` |
+### 1. Node.js 20 LTS
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+```
+
+### 2. Java JDK 17
+
+```bash
+sudo apt install -y openjdk-17-jdk
+```
+
+### 3. Android SDK command-line tools (no Android Studio needed)
+
+```bash
+# Install dependencies
+sudo apt install -y wget unzip
+
+# Download cmdline-tools
+mkdir -p ~/android/cmdline-tools
+cd ~/android/cmdline-tools
+wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+unzip commandlinetools-linux-*.zip
+mv cmdline-tools latest   # sdkmanager expects this layout
+rm commandlinetools-linux-*.zip
+
+# Add to your shell profile (~/.bashrc or ~/.profile)
+export ANDROID_SDK_ROOT="$HOME/android"
+export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
+source ~/.bashrc
+
+# Accept licences and install build tools
+yes | sdkmanager --licenses
+sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
+```
+
+### 4. Bubblewrap CLI
+
+```bash
+npm install -g @bubblewrap/cli
+```
 
 ---
 
@@ -39,12 +75,10 @@ DOMAIN=portal.uwuapps.org bash android/build.sh apk
 ## Step 2 — First-time Bubblewrap setup
 
 ```bash
-# Install Bubblewrap globally
-npm install -g @bubblewrap/cli
-
-# Point Bubblewrap at your Android SDK (run once)
+# Point Bubblewrap at your SDK (run once — answer the prompts or pass flags)
 bubblewrap doctor
-# Follow prompts to set JAVA_HOME and ANDROID_SDK_ROOT
+# JAVA_HOME  →  /usr/lib/jvm/java-17-openjdk-amd64
+# ANDROID_SDK_ROOT  →  /home/<you>/android
 ```
 
 ---
