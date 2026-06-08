@@ -1,0 +1,9 @@
+node_modules/
+.env
+.env.*
+
+# Android signing keystores — never commit these
+android/*.keystore
+android/*.jks
+*.keystore
+*.jks
