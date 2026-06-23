@@ -420,13 +420,31 @@ function openAppModal(app) {
     const thumbsEl = $('galleryThumbs');
     thumbsEl.innerHTML = '';
 
+    let currentBlobUrl = null;
     const showImg = url => {
         mainImg.style.opacity = '0';
-        setTimeout(() => {
-            mainImg.src = url;
-            mainImg.alt = app.title;
-            mainImg.style.opacity = '1';
-        }, 150);
+        if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
+        fetch(url)
+            .then(r => r.blob())
+            .then(blob => {
+                currentBlobUrl = URL.createObjectURL(blob);
+                setTimeout(() => {
+                    mainImg.src = currentBlobUrl;
+                    mainImg.alt = app.title;
+                    mainImg.style.opacity = '1';
+                }, 150);
+            })
+            .catch(() => {
+                setTimeout(() => {
+                    mainImg.src = url;
+                    mainImg.alt = app.title;
+                    mainImg.style.opacity = '1';
+                }, 150);
+            });
+    };
+    mainImg.style.cursor = 'pointer';
+    mainImg.onclick = () => {
+        if (currentBlobUrl) window.open(currentBlobUrl, '_blank');
     };
 
     if (gallery.length) {
