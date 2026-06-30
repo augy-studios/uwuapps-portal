@@ -209,6 +209,10 @@ async function boot() {
         session.clear();
     }
 
+    if (!currentUser) {
+        await initGuestKey('uwu-suite');
+    }
+
     renderAuthUi();
     await loadApps();
 }
