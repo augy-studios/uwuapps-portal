@@ -12,6 +12,8 @@ import {
     err,
     cors
 } from './_supabase.js';
+import { verifySignedRequest } from '../lib/uwu-request-signing-server.js';
+import { randomBytes } from 'node:crypto';
 
 export default async function handler(req, res) {
     if (cors(req, res)) return;
@@ -23,6 +25,12 @@ export default async function handler(req, res) {
     const {
         action
     } = req.body || {};
+
+    const EXEMPT_ACTIONS = ['login', 'register', 'me'];
+    if (!EXEMPT_ACTIONS.includes(action)) {
+        const sig = await verifySignedRequest(req, supabase);
+        if (!sig.valid) return res.status(403).json({ ok: false, error: sig.reason });
+    }
 
     try {
         switch (action) {
@@ -177,10 +185,28 @@ export default async function handler(req, res) {
                     message: 'Could not create session'
                 };
 
+                // Issue signing key
+                const signingKey = randomBytes(32).toString('hex');
+                const { data: skData, error: skErr } = await supabase
+                    .from('uwu_signing_keys')
+                    .insert({
+                        session_token: token,
+                        signing_key: signingKey,
+                        is_guest: false,
+                        app_id: 'portal',
+                        expires_at: expiresAt
+                    })
+                    .select('id')
+                    .single();
+
+                if (skErr) throw { status: 500, message: 'Could not issue signing key' };
+
                 return ok(res, {
                     token,
                     expiresAt,
-                    user: serializeUser(user)
+                    user: serializeUser(user),
+                    signing_key: signingKey,
+                    key_id: skData.id
                 });
             }
 
@@ -191,17 +217,40 @@ export default async function handler(req, res) {
                     status: 401,
                     message: 'Not authenticated or session expired'
                 };
+
+                // Refresh signing key for this session
+                const meToken = (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '').trim();
+                const meSigningKey = randomBytes(32).toString('hex');
+                const meExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+                // Upsert: replace any existing key for this session
+                await supabase.from('uwu_signing_keys').delete().eq('session_token', meToken);
+                const { data: meSkData } = await supabase
+                    .from('uwu_signing_keys')
+                    .insert({
+                        session_token: meToken,
+                        signing_key: meSigningKey,
+                        is_guest: false,
+                        app_id: 'portal',
+                        expires_at: meExpiry
+                    })
+                    .select('id')
+                    .single();
+
                 return ok(res, {
-                    user: serializeUser(user)
+                    user: serializeUser(user),
+                    signing_key: meSigningKey,
+                    key_id: meSkData?.id
                 });
             }
 
             // ── Logout ────────────────────────────────────────
             case 'logout': {
                 const auth = req.headers['authorization'] || '';
-                const token = auth.replace(/^Bearer\s+/i, '').trim();
-                if (token) {
-                    await supabase.from('uwusuite_sessions').delete().eq('token', token);
+                const logoutToken = auth.replace(/^Bearer\s+/i, '').trim();
+                if (logoutToken) {
+                    await supabase.from('uwu_signing_keys').delete().eq('session_token', logoutToken);
+                    await supabase.from('uwusuite_sessions').delete().eq('token', logoutToken);
                 }
                 return ok(res, {
                     message: 'Logged out'

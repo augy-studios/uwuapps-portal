@@ -8,9 +8,13 @@ import {
     err,
     cors
 } from './_supabase.js';
+import { verifySignedRequest } from '../lib/uwu-request-signing-server.js';
 
 export default async function handler(req, res) {
     if (cors(req, res)) return;
+
+    const sig = await verifySignedRequest(req, supabase);
+    if (!sig.valid) return res.status(403).json({ ok: false, error: sig.reason });
 
     // Route: /api/users/preapprove
     if (req.url?.includes('/preapprove') || req.query?.action === 'preapprove') {

@@ -36,7 +36,7 @@ async function apiFetch(path, options = {}) {
     };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await fetch(path, {
+    const res = await signedFetch(path, {
         method: options.method || 'GET',
         headers,
         body: options.body ? JSON.stringify(options.body) : undefined
@@ -197,6 +197,9 @@ async function boot() {
                     action: 'me'
                 }
             });
+            if (res.signing_key && res.key_id) {
+                storeSigningKey(res.signing_key, res.key_id);
+            }
             currentUser = res.user;
         } catch (_) {
             session.clear();
@@ -286,6 +289,9 @@ $('authForm').addEventListener('submit', async e => {
                 expiresAt: res.expiresAt,
                 user: res.user
             });
+            if (res.signing_key && res.key_id) {
+                storeSigningKey(res.signing_key, res.key_id);
+            }
             currentUser = res.user;
 
             if (window.PasswordCredential) {
@@ -323,6 +329,7 @@ $('logoutBtn').addEventListener('click', async () => {
         });
     } catch (_) {}
     session.clear();
+    clearSigningKey();
     currentUser = null;
     $('userDropdown').classList.remove('open');
     renderAuthUi();
