@@ -421,6 +421,9 @@ function openAppModal(app) {
     $('appModalDesc').textContent = app.description || '';
     $('appModalLink').href = app.url;
 
+    const updatedAt = app.updated_at || app.created_at;
+    $('appModalUpdated').textContent = updatedAt ? `Last Updated: ${formatDate(updatedAt)}` : '';
+
     const tld = app.tld || extractTld(app.url);
     const tags = app.tags || [];
     $('appModalTld').innerHTML = `<span class="pill pill-tld">${escHtml(tld)}</span>`;

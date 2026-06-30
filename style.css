@@ -1056,6 +1056,13 @@ body {
   gap: .35rem;
 }
 
+.app-modal-updated {
+  font-size: .8rem;
+  color: var(--text-secondary);
+  text-align: center;
+  margin: -.4rem 0 0;
+}
+
 .app-modal-actions {
   display: flex;
   gap: .6rem;
