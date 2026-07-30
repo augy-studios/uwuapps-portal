@@ -25,16 +25,16 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     }
 });
 
-/* ── Password hashing (bcrypt via bcryptjs) ─────────────── */
+/* Password hashing (bcrypt via bcryptjs) */
 export const hashPassword = (plain) => bcryptHash(plain, 12);
 export const verifyPassword = (plain, hashed) => bcryptCompare(plain, hashed);
 
-/* ── Session token generation ────────────────────────────── */
+/* Session token generation */
 export function generateSessionToken() {
     return randomBytes(48).toString('hex'); // 96-char hex string
 }
 
-/* ── Resolve session token → user ────────────────────────── */
+/* Resolve session token → user */
 export async function resolveSession(req) {
     const auth = req.headers['authorization'] || '';
     const token = auth.replace(/^Bearer\s+/i, '').trim();
@@ -66,7 +66,7 @@ export async function resolveSession(req) {
     return user || null;
 }
 
-/* ── Auth guards ─────────────────────────────────────────── */
+/* Auth guards */
 export async function requireAuth(req) {
     const user = await resolveSession(req);
     if (!user) throw {
@@ -98,7 +98,7 @@ export async function requireAdmin(req) {
     return user;
 }
 
-/* ── Device type detection ───────────────────────────────── */
+/* Device type detection */
 export function detectDevice(req) {
     const ua = (req.headers['user-agent'] || '').toLowerCase();
     if (/tablet|ipad/.test(ua)) return 'Tablet';
@@ -107,7 +107,7 @@ export function detectDevice(req) {
     return 'Others';
 }
 
-/* ── Standard JSON response helpers ─────────────────────── */
+/* Standard JSON response helpers */
 export function ok(res, data, status = 200) {
     res.status(status).json({
         ok: true,
@@ -125,7 +125,7 @@ export function err(res, e) {
     });
 }
 
-/* ── CORS — call at the top of every handler ─────────────── */
+/* CORS, call at the top of every handler */
 export function cors(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
@@ -137,7 +137,7 @@ export function cors(req, res) {
     return false;
 }
 
-/* ── Serialise user for API responses ────────────────────── */
+/* Serialise user for API responses */
 export function serializeUser(user) {
     return {
         id: user.id,

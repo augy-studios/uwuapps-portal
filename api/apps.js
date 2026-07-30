@@ -23,7 +23,7 @@ export default async function handler(req, res) {
     try {
         switch (req.method) {
 
-            // ── GET — list apps ──────────────────────────────
+            // GET, list apps
             case 'GET': {
                 const user = await resolveSession(req);
                 const canSeeAll = user?.is_approved && (user?.is_editor || user?.is_admin);
@@ -53,7 +53,7 @@ export default async function handler(req, res) {
                 });
             }
 
-            // ── POST — create app ────────────────────────────
+            // POST, create app
             case 'POST': {
                 const user = await requireContributor(req);
                 const {
@@ -108,7 +108,7 @@ export default async function handler(req, res) {
                 }, 201);
             }
 
-            // ── PUT — update app ─────────────────────────────
+            // PUT, update app
             case 'PUT': {
                 const user = await requireContributor(req);
                 const {
@@ -192,7 +192,7 @@ export default async function handler(req, res) {
                 });
             }
 
-            // ── DELETE — remove app ──────────────────────────
+            // DELETE, remove app
             case 'DELETE': {
                 await requireAdmin(req);
                 const {

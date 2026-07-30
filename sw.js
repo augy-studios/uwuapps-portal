@@ -1,4 +1,4 @@
-const CACHE_VERSION = "uwusuite-v6";
+const CACHE_VERSION = "uwusuite-v7";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const OFFLINE_URL = "/offline.html";
@@ -8,6 +8,9 @@ const STATIC_ASSETS = [
   "/index.html",
   "/style.css",
   "/script.js",
+  "/js/theme.js",
+  "/js/icons.js",
+  "/js/ui.js",
   "/UUS-main.png",
   "/UUS-512.png",
   "/UUS-192.png",
@@ -16,7 +19,7 @@ const STATIC_ASSETS = [
   OFFLINE_URL
 ];
 
-// ─── Install ──────────────────────────────────────────────────────────────────
+// Install
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => cache.addAll(STATIC_ASSETS))
@@ -24,7 +27,7 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-// ─── Activate ─────────────────────────────────────────────────────────────────
+// Activate
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -38,7 +41,7 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// ─── Fetch — Offline Support ──────────────────────────────────────────────────
+// Fetch, Offline Support
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET" || !event.request.url.startsWith("http")) return;
 
@@ -75,7 +78,7 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
-// ─── Push Notifications ───────────────────────────────────────────────────────
+// Push Notifications
 self.addEventListener("push", (event) => {
   let data = {
     title: "UwU Suite",
@@ -120,7 +123,7 @@ self.addEventListener("notificationclick", (event) => {
   );
 });
 
-// ─── Background Sync ──────────────────────────────────────────────────────────
+// Background Sync
 self.addEventListener("sync", (event) => {
   if (event.tag === "sync-pending-actions") {
     event.waitUntil(syncPendingActions());
@@ -144,7 +147,7 @@ async function syncPendingActions() {
   }
 }
 
-// ─── Periodic Sync ────────────────────────────────────────────────────────────
+// Periodic Sync
 self.addEventListener("periodicsync", (event) => {
   if (event.tag === "refresh-content") {
     event.waitUntil(refreshContent());
@@ -159,11 +162,11 @@ async function refreshContent() {
       await cache.put("/", response);
     }
   } catch {
-    // Network unavailable — existing cache stays valid
+    // Network unavailable, existing cache stays valid
   }
 }
 
-// ─── IndexedDB helpers (for Background Sync queue) ────────────────────────────
+// IndexedDB helpers (for Background Sync queue)
 function openDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open("uwuapps-sync", 1);

@@ -1,5 +1,5 @@
 // api/auth.js
-// POST /api/auth  — body: { action, ...params }
+// POST /api/auth, body: { action, ...params }
 
 import {
     supabase,
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
     try {
         switch (action) {
 
-            // ── Register ──────────────────────────────────────
+            // Register
             case 'register': {
                 const {
                     username,
@@ -130,13 +130,13 @@ export default async function handler(req, res) {
 
                 return ok(res, {
                     message: isPreapproved ?
-                        'Account created and pre-approved — you can log in now!' :
-                        'Account created — awaiting admin approval',
+                        'Account created and pre-approved, you can log in now!' :
+                        'Account created, awaiting admin approval',
                     preapproved: isPreapproved
                 }, 201);
             }
 
-            // ── Login ─────────────────────────────────────────
+            // Login
             case 'login': {
                 const {
                     username,
@@ -210,7 +210,7 @@ export default async function handler(req, res) {
                 });
             }
 
-            // ── Me — validate token + return user ─────────────
+            // Me, validate token + return user
             case 'me': {
                 const user = await resolveSession(req);
                 if (!user) throw {
@@ -244,7 +244,7 @@ export default async function handler(req, res) {
                 });
             }
 
-            // ── Logout ────────────────────────────────────────
+            // Logout
             case 'logout': {
                 const auth = req.headers['authorization'] || '';
                 const logoutToken = auth.replace(/^Bearer\s+/i, '').trim();

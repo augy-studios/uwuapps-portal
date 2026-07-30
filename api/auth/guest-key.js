@@ -1,4 +1,4 @@
-// api/auth/guest-key.js — issues short-lived signing keys for unauthenticated PWAs
+// api/auth/guest-key.js, issues short-lived signing keys for unauthenticated PWAs
 
 import { supabase, cors } from '../_supabase.js';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -13,7 +13,7 @@ export default async function handler(req, res) {
 
     const allowed = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
     const origin = req.headers['origin'];
-    // Same-origin GETs often omit the Origin header entirely — only block when it's present and not allowed
+    // Same-origin GETs often omit the Origin header entirely, only block when it's present and not allowed
     if (origin && allowed.length && !allowed.includes(origin)) {
         return res.status(403).json({ ok: false, error: 'Origin not allowed' });
     }

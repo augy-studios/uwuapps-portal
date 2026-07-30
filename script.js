@@ -1,6 +1,6 @@
 'use strict';
 
-/* SESSION — localStorage key: uwusuite_session
+/* SESSION, localStorage key: uwusuite_session
    Stores: { token, expiresAt, user } */
 const SESSION_KEY = 'uwusuite_session';
 
@@ -28,7 +28,7 @@ const session = {
     }
 };
 
-/* ── API FETCH — always sends Bearer token if present */
+/* API FETCH, always sends Bearer token if present */
 async function apiFetch(path, options = {}) {
     const token = session.token();
     const headers = {
@@ -50,7 +50,7 @@ async function apiFetch(path, options = {}) {
         renderAuthUi();
         throw {
             status: 401,
-            message: data.error || 'Session expired — please log in again'
+            message: data.error || 'Session expired, please log in again'
         };
     }
 
@@ -61,7 +61,7 @@ async function apiFetch(path, options = {}) {
     return data;
 }
 
-/* ── STATE */
+/* STATE */
 let currentUser = null;
 let allApps = [];
 let filteredApps = [];
@@ -73,7 +73,7 @@ let galleryFiles = [];
 let galleryUrls = [];
 let selectedThumbIndex = 0;
 
-/* ── DOM HELPERS */
+/* DOM HELPERS */
 const $ = id => document.getElementById(id);
 const toast = $('toast');
 let toastTimer;
@@ -131,37 +131,9 @@ function isAdmin() {
     return currentUser?.isApproved && currentUser?.isAdmin;
 }
 
-/* ── THEME */
-const THEME_KEY = 'uwusuite-theme';
-const themeColors = {
-    classic: '#ccffcc',
-    notgreen1: '#ffcccc',
-    notgreen2: '#ccccff',
-    notgreen3: '#ffffcc',
-    notgreen4: '#ffccff',
-    notgreen5: '#ccffff',
-    ultralight: '#f8fff8'
-};
+/* Theme lives in js/theme.js, wired from the module block in index.html */
 
-function applyTheme(key) {
-    document.documentElement.setAttribute('data-theme', key);
-    document.querySelector('meta[name="theme-color"]').content = themeColors[key] || '#ccffcc';
-    localStorage.setItem(THEME_KEY, key);
-    document.querySelectorAll('.theme-swatch').forEach(s =>
-        s.classList.toggle('active', s.dataset.theme === key)
-    );
-}
-applyTheme(localStorage.getItem(THEME_KEY) || 'classic');
-
-$('themeBtn').addEventListener('click', () => openModal('themeModal'));
-document.querySelectorAll('.theme-swatch').forEach(btn =>
-    btn.addEventListener('click', () => {
-        applyTheme(btn.dataset.theme);
-        closeModal('themeModal');
-    })
-);
-
-/* ── AUTH UI */
+/* AUTH UI */
 function renderAuthUi() {
     const loggedIn = !!currentUser;
     $('loginBtn').classList.toggle('hidden', loggedIn);
@@ -184,7 +156,7 @@ function renderAuthUi() {
     }
 }
 
-/* ── BOOT */
+/* BOOT */
 async function boot() {
     $('footerYear').textContent = new Date().getFullYear();
 
@@ -218,7 +190,7 @@ async function boot() {
 }
 boot();
 
-/* ── AUTH MODAL */
+/* AUTH MODAL */
 let authMode = 'login';
 
 $('loginBtn').addEventListener('click', () => {
@@ -347,7 +319,7 @@ $('avatarWrap').addEventListener('click', e => {
 });
 document.addEventListener('click', () => $('userDropdown').classList.remove('open'));
 
-/* ── APPS */
+/* APPS */
 async function loadApps() {
     $('gridSkeleton').classList.remove('hidden');
     document.querySelectorAll('.app-card').forEach(c => c.remove());
@@ -415,7 +387,7 @@ function buildAppCard(app, i) {
     return card;
 }
 
-/* ── APP DETAIL MODAL */
+/* APP DETAIL MODAL */
 function openAppModal(app) {
     $('appModalTitle').textContent = app.title;
     $('appModalDesc').textContent = app.description || '';
@@ -499,7 +471,7 @@ function openAppModal(app) {
     openModal('appModal');
 }
 
-/* ── ADD / EDIT APP MODAL */
+/* ADD / EDIT APP MODAL */
 $('addAppBtn').addEventListener('click', () => openEditModal(null));
 
 function openEditModal(app) {
@@ -702,7 +674,7 @@ $('editForm').addEventListener('submit', async e => {
     }
 });
 
-/* ── DELETE */
+/* DELETE */
 $('confirmDeleteBtn').addEventListener('click', async () => {
     if (!pendingDeleteId) return;
     try {
@@ -719,7 +691,7 @@ $('confirmDeleteBtn').addEventListener('click', async () => {
     }
 });
 
-/* ── ADMIN PANEL */
+/* ADMIN PANEL */
 $('adminPanelBtn').addEventListener('click', async () => {
     $('userDropdown').classList.remove('open');
     await loadAdminData();
@@ -755,7 +727,7 @@ function renderPendingTable(users) {
     users.forEach(u => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-      <td>${escHtml(u.displayName||'—')}</td>
+      <td>${escHtml(u.displayName||'-')}</td>
       <td>${escHtml(u.email)}</td>
       <td>${formatDate(u.created_at||'')}</td>
       <td style="display:flex;gap:.4rem;padding:.65rem .75rem">
@@ -776,14 +748,14 @@ function renderUsersTable(users) {
         const roleTxt = u.isAdmin ? 'admin' : u.isEditor ? 'editor' : 'viewer';
         const tr = document.createElement('tr');
         tr.innerHTML = `
-      <td>${escHtml(u.displayName||'—')}</td>
+      <td>${escHtml(u.displayName||'-')}</td>
       <td>${escHtml(u.email)}</td>
       <td><span class="role-badge">${roleTxt}</span></td>
       <td style="display:flex;gap:.4rem;padding:.65rem .75rem">
         ${!isMe ? `
           <button class="btn btn-ghost"  style="font-size:.75rem;padding:.3rem .7rem" data-uid="${u.id}" data-action="toggle-role" data-is-admin="${u.isAdmin}">${u.isAdmin ? '↓ Editor' : '↑ Admin'}</button>
           <button class="btn btn-danger" style="font-size:.75rem;padding:.3rem .7rem" data-uid="${u.id}" data-action="revoke">Revoke</button>
-        ` : '<span style="font-size:.8rem;color:var(--text-muted)">You</span>'}
+        ` : '<span style="font-size:.8rem;color:var(--muted)">You</span>'}
       </td>`;
         tbody.appendChild(tr);
     });
@@ -803,7 +775,7 @@ function renderPreapprovedTable(rows) {
       <td><span class="role-badge">${escHtml(r.preapproved_role)}</span></td>
       <td>${r.activated_at ? '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg> Activated' : '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Pending'}</td>
       <td style="padding:.65rem .75rem">
-        ${!r.activated_at ? `<button class="btn btn-danger" style="font-size:.75rem;padding:.3rem .7rem" data-prid="${r.id}" data-action="remove-preapproval">Remove</button>` : '—'}
+        ${!r.activated_at ? `<button class="btn btn-danger" style="font-size:.75rem;padding:.3rem .7rem" data-prid="${r.id}" data-action="remove-preapproval">Remove</button>` : '-'}
       </td>`;
         tbody.appendChild(tr);
     });
@@ -891,7 +863,7 @@ $('adminModal').addEventListener('click', async e => {
     }
 });
 
-/* ── SEARCH / FILTER / SORT */
+/* SEARCH / FILTER / SORT */
 $('searchInput').addEventListener('input', applyFilters);
 $('sortSelect').addEventListener('change', () => {
     activeSort = $('sortSelect').value;
@@ -907,7 +879,7 @@ document.querySelectorAll('[data-filter="tag"]').forEach(btn => {
     });
 });
 
-/* ── MODAL CLOSE */
+/* MODAL CLOSE */
 document.querySelectorAll('.modal-close').forEach(btn => {
     btn.addEventListener('click', () => {
         if (btn.dataset.modal) closeModal(btn.dataset.modal);
@@ -923,7 +895,7 @@ document.addEventListener('keydown', e => {
         document.querySelectorAll('.modal-backdrop:not(.hidden)').forEach(m => m.classList.add('hidden'));
 });
 
-/* ── PWA */
+/* PWA */
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 }

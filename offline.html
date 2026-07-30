@@ -4,13 +4,67 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#ccffcc" />
-  <title>UwU Suite — Offline</title>
+  <title>UwU Suite Offline</title>
+
+  <!-- Land the saved theme before first paint. Keep APP_KEY in sync with js/theme.js. -->
+  <script>
+    (function () {
+      var k = "uwusuite";
+      var m = "light";
+      var c = "classic";
+      try {
+        m = localStorage.getItem(k + ".mode") || "light";
+        c = localStorage.getItem(k + ".colorTheme") || "classic";
+      } catch (e) {}
+      document.documentElement.setAttribute("data-mode", m);
+      document.documentElement.setAttribute("data-color-theme", c);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&display=swap" />
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    /* Self-contained: this page is served by the service worker while offline. */
+
+    /* ---- brand colour tokens (7 swatches) ---- */
+    :root,
+    :root[data-color-theme="classic"] { --brand: #ccffcc; --brand-rgb: 204, 255, 204; }
+    :root[data-color-theme="not-green-1"] { --brand: #ffcccc; --brand-rgb: 255, 204, 204; }
+    :root[data-color-theme="not-green-2"] { --brand: #ccccff; --brand-rgb: 204, 204, 255; }
+    :root[data-color-theme="not-green-3"] { --brand: #ffffcc; --brand-rgb: 255, 255, 204; }
+    :root[data-color-theme="not-green-4"] { --brand: #ffccff; --brand-rgb: 255, 204, 255; }
+    :root[data-color-theme="not-green-5"] { --brand: #ccffff; --brand-rgb: 204, 255, 255; }
+    :root[data-color-theme="really-light-green"] { --brand: #ffffff; --brand-rgb: 255, 255, 255; }
+
+    /* ---- light / dark surface tokens ---- */
+    :root,
+    :root[data-mode="light"] {
+      --bg: #eef2f0;
+      --surface-strong: rgba(255, 255, 255, 0.78);
+      --surface-border: rgba(255, 255, 255, 0.65);
+      --ink: #121815;
+      --muted: #5b665f;
+      --brand-ink: #1f6b3d;
+    }
+
+    :root[data-mode="dark"] {
+      --bg: #0c100e;
+      --surface-strong: rgba(255, 255, 255, 0.11);
+      --surface-border: rgba(255, 255, 255, 0.14);
+      --ink: #eef2ef;
+      --muted: #9aa7a0;
+      --brand-ink: #bff5cf;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Jua", "Segoe UI", sans-serif;
+    }
+
     body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #ccffcc;
-      color: #1a1a2e;
+      background-color: color-mix(in srgb, var(--brand) 10%, var(--bg));
+      color: var(--ink);
       min-height: 100dvh;
       display: flex;
       flex-direction: column;
@@ -20,21 +74,31 @@
       padding: 2rem;
       text-align: center;
     }
+
     img { width: 96px; height: 96px; border-radius: 24px; }
-    h1 { font-size: 1.5rem; font-weight: 700; }
-    p { color: #444; max-width: 320px; line-height: 1.6; }
+    h1 { font-size: 1.5rem; color: var(--brand-ink); }
+    p { color: var(--muted); max-width: 320px; line-height: 1.6; }
+
     button {
       margin-top: 0.5rem;
       padding: 0.75rem 2rem;
-      background: #1a1a2e;
-      color: #ccffcc;
+      background: var(--brand-ink);
+      color: var(--bg);
       border: none;
       border-radius: 9999px;
       font-size: 1rem;
-      font-weight: 600;
       cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease;
     }
-    button:hover { opacity: 0.85; }
+    button:hover { transform: translateY(-1px); opacity: 0.9; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
+    }
   </style>
 </head>
 <body>

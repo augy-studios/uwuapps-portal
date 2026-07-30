@@ -29,7 +29,36 @@
     <meta property="og:site_name" content="UwU Apps" />
     <meta property="og:description" content="The official homepage for all UwU Apps web apps, all under one roof!" />
 
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Jua">
+    <!-- Land the saved theme before first paint. Keep APP_KEY in sync with js/theme.js. -->
+    <script>
+        (function () {
+            var k = "uwusuite";
+            var legacy = {
+                classic: "classic",
+                notgreen1: "not-green-1",
+                notgreen2: "not-green-2",
+                notgreen3: "not-green-3",
+                notgreen4: "not-green-4",
+                notgreen5: "not-green-5",
+                ultralight: "really-light-green"
+            };
+            try {
+                var old = localStorage.getItem("uwusuite-theme");
+                if (old) {
+                    if (!localStorage.getItem(k + ".colorTheme") && legacy[old]) {
+                        localStorage.setItem(k + ".colorTheme", legacy[old]);
+                    }
+                    localStorage.removeItem("uwusuite-theme");
+                }
+            } catch (e) {}
+            var m = localStorage.getItem(k + ".mode") || "light";
+            var c = localStorage.getItem(k + ".colorTheme") || "classic";
+            document.documentElement.setAttribute("data-mode", m);
+            document.documentElement.setAttribute("data-color-theme", c);
+        })();
+    </script>
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&display=swap">
     <link rel="stylesheet" href="/style.css">
     <meta name="theme-color" content="#ccffcc" />
 
@@ -40,15 +69,10 @@
     <meta name="twitter:card" content="summary">
     <meta name="twitter:image:src" content="/UUS-main.png">
     <meta property="og:image" content="/UUS-main.png" />
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <script defer="" src="https://use.fontawesome.com/releases/v6.5.2/js/all.js"></script>
 </head>
 
 <body>
-    <div class="noise"></div>
-
-    <!-- ── Header ── -->
+    <!-- Header -->
     <header class="site-header glass-card">
         <div class="header-inner">
             <div class="logo">
@@ -56,12 +80,8 @@
                 <span class="logo-suite">Suite</span>
             </div>
             <nav class="header-nav">
-                <button class="btn-icon" id="themeBtn" title="Change theme">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="4" />
-                        <path
-                            d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32 1.41-1.41" />
-                        </svg>
+                <button class="icon-btn" id="themeBtn" type="button" aria-label="Theme">
+                    <span data-icon="sun"></span>
                 </button>
                 <button class="btn btn-ghost" id="loginBtn">Log in</button>
                 <div class="user-menu hidden" id="userMenu">
@@ -83,13 +103,13 @@
         </div>
     </header>
 
-    <!-- ── Hero ── -->
+    <!-- Hero -->
     <section class="hero">
         <h1 class="hero-title">UwU Suite</h1>
         <p class="hero-subtitle">All your favourite web apps, in one cosy corner of the internet</p>
     </section>
 
-    <!-- ── Controls ── -->
+    <!-- Controls -->
     <section class="controls-bar">
         <div class="search-wrap">
             <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -120,7 +140,7 @@
         </div>
     </section>
 
-    <!-- ── App Grid ── -->
+    <!-- App Grid -->
     <main class="app-grid" id="appGrid">
         <div class="grid-skeleton" id="gridSkeleton">
             <div class="skeleton-card"></div>
@@ -146,34 +166,7 @@
                 rel="noopener noreferrer">Buy Augy a Coffee</a></p>
     </footer>
 
-    <!-- ═══ MODALS ═══ -->
-
-    <!-- Theme Picker -->
-    <div class="modal-backdrop hidden" id="themeModal">
-        <div class="modal glass-card">
-            <div class="modal-header">
-                <h2>Pick a Theme <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg></h2>
-                <button class="btn-icon modal-close" data-modal="themeModal" aria-label="Close"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-            </div>
-            <div class="theme-grid">
-                <button class="theme-swatch active" data-theme="classic" style="--swatch:#ccffcc"><span
-                        class="swatch-dot"></span><span>Classic</span></button>
-                <button class="theme-swatch" data-theme="notgreen1" style="--swatch:#ffcccc"><span
-                        class="swatch-dot"></span><span>Not Green 1</span></button>
-                <button class="theme-swatch" data-theme="notgreen2" style="--swatch:#ccccff"><span
-                        class="swatch-dot"></span><span>Not Green 2</span></button>
-                <button class="theme-swatch" data-theme="notgreen3" style="--swatch:#ffffcc"><span
-                        class="swatch-dot"></span><span>Not Green 3</span></button>
-                <button class="theme-swatch" data-theme="notgreen4" style="--swatch:#ffccff"><span
-                        class="swatch-dot"></span><span>Not Green 4</span></button>
-                <button class="theme-swatch" data-theme="notgreen5" style="--swatch:#ccffff"><span
-                        class="swatch-dot"></span><span>Not Green 5</span></button>
-                <button class="theme-swatch" data-theme="ultralight"
-                    style="--swatch:#f8fff8;border:1px solid #ddd"><span class="swatch-dot"></span><span>Really Really
-                        Light Green</span></button>
-            </div>
-        </div>
-    </div>
+    <!-- MODALS -->
 
     <!-- Auth Modal -->
     <div class="modal-backdrop hidden" id="authModal">
@@ -285,7 +278,7 @@
                             <line x1="12" y1="3" x2="12" y2="15" /></svg>
                         <p>Drag & drop images or <button type="button" class="link-btn" id="browseBtn">browse</button>
                         </p>
-                        <p class="drop-hint">PNG, JPG, GIF — auto-converted to WebP</p>
+                        <p class="drop-hint">PNG, JPG, GIF, auto-converted to WebP</p>
                         <input type="file" id="imageFileInput" accept="image/*" multiple hidden />
                     </div>
                     <div class="gallery-picker" id="galleryPicker"></div>
@@ -355,15 +348,15 @@
                 <form class="preapprove-form" id="preapproveForm">
                     <div class="form-row" style="align-items:flex-end">
                         <input type="email" id="preapproveEmail" placeholder="email@example.com" required
-                            style="flex:1;padding:.65rem .9rem;border-radius:10px;border:1px solid var(--glass-border);background:rgba(255,255,255,.6);font-family:inherit;font-size:.9rem;color:var(--text-primary);outline:none;" />
+                            style="flex:1;padding:.65rem .9rem;border-radius:10px;border:1px solid var(--surface-border);background:var(--surface-strong);font-family:inherit;font-size:.9rem;color:var(--ink);outline:none;" />
                         <select id="preapproveRole"
-                            style="padding:.65rem .9rem;border-radius:10px;border:1px solid var(--glass-border);background:rgba(255,255,255,.6);font-family:inherit;font-size:.9rem;color:var(--text-secondary);">
+                            style="padding:.65rem .9rem;border-radius:10px;border:1px solid var(--surface-border);background:var(--surface-strong);font-family:inherit;font-size:.9rem;color:var(--ink);">
                             <option value="editor">Editor</option>
                             <option value="admin">Admin</option>
                         </select>
                         <button type="submit" class="btn btn-primary">Pre-approve</button>
                     </div>
-                    <p style="font-size:.78rem;color:var(--text-muted);margin-top:.5rem">
+                    <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem">
                         If the email is already registered, the user is approved immediately. Otherwise they are
                         auto-approved when they register.
                     </p>
@@ -404,8 +397,101 @@
     <!-- Absorbs any accidental form navigation so the page never redirects to /# -->
     <iframe name="auth-sink" style="display:none" aria-hidden="true" tabindex="-1"></iframe>
 
+    <!-- Theme Modal -->
+    <div class="modal-backdrop hidden" id="themeModal">
+        <div class="modal modal-sm glass-card" role="dialog" aria-modal="true" aria-labelledby="themeModalTitle">
+            <div class="modal-header">
+                <h2 id="themeModalTitle">Theme</h2>
+                <button class="icon-btn small" type="button" data-close-modal="themeModal" aria-label="Close">
+                    <span data-icon="close"></span>
+                </button>
+            </div>
+            <div class="theme-modal-body">
+                <p class="theme-section-label">Mode</p>
+                <div class="mode-toggle" id="modeToggle">
+                    <button class="mode-btn" type="button" data-mode="light"><span data-icon="sun"></span>Light</button>
+                    <button class="mode-btn" type="button" data-mode="dark"><span data-icon="moon"></span>Dark</button>
+                </div>
+                <p class="theme-section-label">Brand colour</p>
+                <div class="swatch-grid" id="swatchGrid"></div>
+            </div>
+        </div>
+    </div>
+
     <script src="/lib/uwu-request-signing.js"></script>
     <script src="/script.js"></script>
+
+    <script type="module">
+        import { COLOR_THEMES, applyColorTheme, applyMode, getStoredColorTheme, getStoredMode, initTheme } from "/js/theme.js";
+        import { hydrateIcons, openModal, closeModal } from "/js/ui.js";
+
+        function buildThemeModal() {
+            const grid = document.getElementById("swatchGrid");
+            grid.innerHTML = COLOR_THEMES.map(
+                (t) => `
+      <button class="swatch" data-theme-id="${t.id}" style="--swatch-color:${t.hex}" type="button" aria-label="${t.label}">
+        <span class="swatch-dot"></span>
+        <span class="swatch-label">${t.label}</span>
+      </button>`
+            ).join("");
+
+            syncThemeModalState();
+
+            grid.addEventListener("click", (e) => {
+                const btn = e.target.closest("[data-theme-id]");
+                if (!btn) return;
+                applyColorTheme(btn.dataset.themeId);
+                syncThemeModalState();
+            });
+
+            document.getElementById("modeToggle").addEventListener("click", (e) => {
+                const btn = e.target.closest("[data-mode]");
+                if (!btn) return;
+                applyMode(btn.dataset.mode);
+                syncThemeModalState();
+            });
+        }
+
+        function syncThemeModalState() {
+            const activeTheme = getStoredColorTheme();
+            const activeMode = getStoredMode();
+            document.querySelectorAll("#swatchGrid .swatch").forEach((el) => {
+                el.classList.toggle("active", el.dataset.themeId === activeTheme);
+            });
+            document.querySelectorAll("#modeToggle .mode-btn").forEach((el) => {
+                el.classList.toggle("active", el.dataset.mode === activeMode);
+            });
+            updateThemeButtonIcon();
+        }
+
+        function updateThemeButtonIcon() {
+            const span = document.querySelector("#themeBtn [data-icon]");
+            span.setAttribute("data-icon", getStoredMode() === "dark" ? "moon" : "sun");
+            hydrateIcons(document.getElementById("themeBtn"));
+        }
+
+        function wireThemeModal() {
+            document.querySelectorAll("[data-close-modal]").forEach((btn) => {
+                btn.addEventListener("click", () => closeModal(btn.dataset.closeModal));
+            });
+            const backdrop = document.getElementById("themeModal");
+            backdrop.addEventListener("click", (e) => {
+                if (e.target === backdrop) closeModal(backdrop.id);
+            });
+            // script.js also closes backdrops on Escape and runs first, so this
+            // must not gate on .hidden or the body scroll lock would stay behind.
+            document.addEventListener("keydown", (e) => {
+                if (e.key === "Escape") closeModal(backdrop.id);
+            });
+            document.getElementById("themeBtn").addEventListener("click", () => openModal("themeModal"));
+        }
+
+        initTheme();
+        hydrateIcons();
+        updateThemeButtonIcon();
+        buildThemeModal();
+        wireThemeModal();
+    </script>
 
     <script>
         if ('serviceWorker' in navigator) {

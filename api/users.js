@@ -24,7 +24,7 @@ export default async function handler(req, res) {
     try {
         switch (req.method) {
 
-            // ── GET — all users + pending preapprovals ───────
+            // GET, all users + pending preapprovals
             case 'GET': {
                 await requireAdmin(req);
 
@@ -49,7 +49,7 @@ export default async function handler(req, res) {
                 });
             }
 
-            // ── PUT — update user flags ──────────────────────
+            // PUT, update user flags
             case 'PUT': {
                 const adminUser = await requireAdmin(req);
                 const {
@@ -92,7 +92,7 @@ export default async function handler(req, res) {
                 });
             }
 
-            // ── DELETE — remove user ─────────────────────────
+            // DELETE, remove user
             case 'DELETE': {
                 const adminUser = await requireAdmin(req);
                 const {
@@ -128,12 +128,12 @@ export default async function handler(req, res) {
     }
 }
 
-/* ── Preapproval sub-handler ─────────────────────────────── */
+/* Preapproval sub-handler */
 async function handlePreapprove(req, res) {
     try {
         const adminUser = await requireAdmin(req);
 
-        // POST — add preapproval
+        // POST, add preapproval
         if (req.method === 'POST') {
             const {
                 email,
@@ -148,7 +148,7 @@ async function handlePreapprove(req, res) {
                 message: 'role must be editor or admin'
             };
 
-            // Check if user already exists — if so, approve them directly
+            // Check if user already exists; if so, approve them directly
             const {
                 data: existingUser
             } = await supabase
@@ -158,7 +158,7 @@ async function handlePreapprove(req, res) {
                 .single();
 
             if (existingUser) {
-                // User already registered — approve them now
+                // User already registered, approve them now
                 const patch = {
                     is_approved: true,
                     is_editor: role === 'editor' || role === 'admin',
@@ -171,7 +171,7 @@ async function handlePreapprove(req, res) {
                 });
             }
 
-            // User doesn't exist yet — add to preapproval list
+            // User doesn't exist yet, add to preapproval list
             const {
                 data,
                 error
@@ -195,7 +195,7 @@ async function handlePreapprove(req, res) {
             }, 201);
         }
 
-        // DELETE — remove preapproval
+        // DELETE, remove preapproval
         if (req.method === 'DELETE') {
             const {
                 id
