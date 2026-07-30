@@ -194,7 +194,8 @@ body {
 :root[data-mode="dark"] .role-badge,
 :root[data-mode="dark"] .dropdown-item:hover,
 :root[data-mode="dark"] .auth-tab.active,
-:root[data-mode="dark"] .admin-tab.active {
+:root[data-mode="dark"] .admin-tab.active,
+:root[data-mode="dark"] .pill.pill-singapore {
   color: var(--bg);
 }
 
@@ -505,11 +506,17 @@ body {
 .pill.pill-tools,
 .pill.pill-games,
 .pill.pill-bots,
-.pill.pill-singapore,
 .pill.pill-draft {
   background: var(--surface-strong);
   border-color: var(--surface-border);
   color: var(--muted);
+}
+
+/* Fixed-meaning accent: Singapore keeps its own background in both modes. */
+.pill.pill-singapore {
+  background: #ffcccc;
+  border-color: rgba(0, 0, 0, 0.12);
+  color: var(--ink);
 }
 
 /* ── Skeleton loaders */
