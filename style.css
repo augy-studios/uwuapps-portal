@@ -33,18 +33,42 @@ button:disabled { cursor: not-allowed; opacity: 0.6; }
   }
 }
 
-/* ---- brand colour tokens (7 swatches) ---- */
+/* ---- brand colour tokens (7 swatches) ----
+   Each swatch carries its own ink pair: --brand-ink-light is a dark, readable
+   version of the hue for light mode, --brand-ink-dark a pale one for dark mode.
+   The mode blocks below pick whichever applies, so brand-tinted text, pills and
+   solid fills follow the swatch instead of staying green. */
 :root,
 :root[data-color-theme="classic"] {
   --brand: #ccffcc;
   --brand-rgb: 204, 255, 204;
+  --brand-ink-light: #1f6b3d;
+  --brand-ink-dark: #bff5cf;
 }
-:root[data-color-theme="not-green-1"] { --brand: #ffcccc; --brand-rgb: 255, 204, 204; }
-:root[data-color-theme="not-green-2"] { --brand: #ccccff; --brand-rgb: 204, 204, 255; }
-:root[data-color-theme="not-green-3"] { --brand: #ffffcc; --brand-rgb: 255, 255, 204; }
-:root[data-color-theme="not-green-4"] { --brand: #ffccff; --brand-rgb: 255, 204, 255; }
-:root[data-color-theme="not-green-5"] { --brand: #ccffff; --brand-rgb: 204, 255, 255; }
-:root[data-color-theme="really-light-green"] { --brand: #ffffff; --brand-rgb: 255, 255, 255; }
+:root[data-color-theme="not-green-1"] {
+  --brand: #ffcccc; --brand-rgb: 255, 204, 204;
+  --brand-ink-light: #8f2d3f; --brand-ink-dark: #f7c3cb;
+}
+:root[data-color-theme="not-green-2"] {
+  --brand: #ccccff; --brand-rgb: 204, 204, 255;
+  --brand-ink-light: #3a3a8f; --brand-ink-dark: #c9c9f7;
+}
+:root[data-color-theme="not-green-3"] {
+  --brand: #ffffcc; --brand-rgb: 255, 255, 204;
+  --brand-ink-light: #6b5a12; --brand-ink-dark: #f2ecb8;
+}
+:root[data-color-theme="not-green-4"] {
+  --brand: #ffccff; --brand-rgb: 255, 204, 255;
+  --brand-ink-light: #7d2c7d; --brand-ink-dark: #f2c3f2;
+}
+:root[data-color-theme="not-green-5"] {
+  --brand: #ccffff; --brand-rgb: 204, 255, 255;
+  --brand-ink-light: #14646b; --brand-ink-dark: #bdeff5;
+}
+:root[data-color-theme="really-light-green"] {
+  --brand: #ffffff; --brand-rgb: 255, 255, 255;
+  --brand-ink-light: #333b37; --brand-ink-dark: #e6ece8;
+}
 
 /* ---- light / dark surface tokens ---- */
 :root,
@@ -56,7 +80,7 @@ button:disabled { cursor: not-allowed; opacity: 0.6; }
   --ink: #121815;
   --muted: #5b665f;
   --shadow: 0 10px 30px rgba(20, 40, 30, 0.10);
-  --brand-ink: #1f6b3d;
+  --brand-ink: var(--brand-ink-light, #1f6b3d);
   --ok: #16a34a;
   --warn: #b45309;
   --busy: #64748b;
@@ -71,7 +95,7 @@ button:disabled { cursor: not-allowed; opacity: 0.6; }
   --ink: #eef2ef;
   --muted: #9aa7a0;
   --shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
-  --brand-ink: #bff5cf;
+  --brand-ink: var(--brand-ink-dark, #bff5cf);
   --ok: #4ade80;
   --warn: #fbbf24;
   --busy: #94a3b8;
