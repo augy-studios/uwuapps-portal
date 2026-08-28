@@ -28,7 +28,7 @@ Start with [main-site/README.md](main-site/README.md) and [main-site/release-not
 
 ### [telegram-bot/](telegram-bot/)
 
-A Telegram bot that lets people browse the directory, link their portal account, and hear about new apps without opening a browser. It runs on a Debian VPS inside tmux, stores everything in SQLite, and talks to the portal over the same signed API the website uses.
+A Telegram bot that lets people browse the directory, link their portal account, and hear about new apps without opening a browser. A linked account can also use Telegram as a second factor when signing in to the portal, either by approving a prompt or by pasting in a one time code. It runs on a Debian VPS inside tmux, stores everything in SQLite, and talks to the portal over the same signed API the website uses.
 
 **Status: specified, not yet built.** The build brief is not tracked in git, so ask a maintainer for `telegram-bot-spec.md` if you plan to work on it. Once the directory lands it will carry its own `README.md` and `SETUP.md`.
 
