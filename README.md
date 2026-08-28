@@ -1,0 +1,58 @@
+# UwU Apps Portal
+
+The monorepo behind **UwU Suite**, the official homepage for all UwU Apps web apps, all under one roof.
+
+UwU Suite is a browsable directory of web apps built by [Augy Studios](https://github.com/augy-studios). Visitors can filter by category, spot recently published apps through the NEW badge, and launch anything straight from the browser. Approved editors and admins manage the catalogue through a signed in dashboard on the same site.
+
+---
+
+## Repository layout
+
+| Directory | What lives there |
+| --- | --- |
+| [main-site/](main-site/) | The portal itself. A static PWA plus Vercel serverless functions backed by Supabase. |
+| [telegram-bot/](telegram-bot/) | A Telethon based Telegram bot that fronts the portal. Planned, see the status note below. |
+
+### [main-site/](main-site/)
+
+The public site and its API.
+
+- Progressive web app, installable, with an offline fallback and a service worker
+- Installable from the Play Store as `org.uwuapps.portal`
+- Themeable, with a light and dark mode plus several colour themes
+- Serverless API under [main-site/api/](main-site/api/) covering [authentication](main-site/api/auth.js), the [app catalogue](main-site/api/apps.js), [user administration](main-site/api/users.js), and [uploads](main-site/api/upload.js)
+- Every API call is HMAC signed, see [main-site/lib/uwu-request-signing-server.js](main-site/lib/uwu-request-signing-server.js)
+- Deployed on Vercel, configured in [main-site/vercel.json](main-site/vercel.json)
+
+Start with [main-site/README.md](main-site/README.md) and [main-site/release-notes.md](main-site/release-notes.md).
+
+### [telegram-bot/](telegram-bot/)
+
+A Telegram bot that lets people browse the directory, link their portal account, and hear about new apps without opening a browser. It runs on a Debian VPS inside tmux, stores everything in SQLite, and talks to the portal over the same signed API the website uses.
+
+**Status: specified, not yet built.** The build brief is not tracked in git, so ask a maintainer for `telegram-bot-spec.md` if you plan to work on it. Once the directory lands it will carry its own `README.md` and `SETUP.md`.
+
+---
+
+## Getting started
+
+The portal is a static site, so most work needs nothing more than a local web server pointed at [main-site/](main-site/).
+
+```bash
+git clone https://github.com/augy-studios/uwuapps-portal.git
+cd uwuapps-portal/main-site
+npm install          # only needed for the serverless functions
+npx vercel dev       # serves the site and the /api routes together
+```
+
+The API functions expect `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, and `ALLOWED_ORIGINS` in the environment. Environment files are git ignored, so copy the values from the Vercel project rather than committing them.
+
+---
+
+## Contributing
+
+Issues and pull requests are welcome. Please read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) first, keep changes scoped to one directory where possible, and never commit secrets, keystores, or session files.
+
+## Licence
+
+Released under the MIT Licence, see [LICENSE](LICENSE).
