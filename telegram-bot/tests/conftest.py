@@ -131,6 +131,11 @@ class FakePortal:
         self.last_success_at = None
         self.raises: Exception | None = None
         self.calls: list[tuple[str, tuple[Any, ...]]] = []
+        # The management surface. `account` is what a lookup answers with, which
+        # is what decides whether a chat may manage anything at all.
+        self.account: Any = None
+        self.all_apps: list[dict[str, Any]] = []
+        self.writes_raise: Exception | None = None
 
     async def list_apps(self):
         self.calls.append(("list_apps", ()))
@@ -142,7 +147,36 @@ class FakePortal:
         self.calls.append(("lookup_link", (telegram_id,)))
         if self.raises:
             raise self.raises
-        return None
+        return self.account
+
+    async def list_all_apps(self, telegram_id):
+        self.calls.append(("list_all_apps", (telegram_id,)))
+        if self.writes_raise:
+            raise self.writes_raise
+        return list(self.all_apps)
+
+    async def create_app(self, telegram_id, app):
+        self.calls.append(("create_app", (telegram_id, app)))
+        if self.writes_raise:
+            raise self.writes_raise
+        created = {"id": "new-1", **app}
+        created.setdefault("published", False)
+        return created
+
+    async def update_app(self, telegram_id, app_id, app):
+        self.calls.append(("update_app", (telegram_id, app_id, app)))
+        if self.writes_raise:
+            raise self.writes_raise
+        existing = next(
+            (a for a in self.all_apps if str(a.get("id")) == str(app_id)), {"id": app_id}
+        )
+        return {**existing, **app}
+
+    async def delete_app(self, telegram_id, app_id):
+        self.calls.append(("delete_app", (telegram_id, app_id)))
+        if self.writes_raise:
+            raise self.writes_raise
+        return "Removed app"
 
     async def redeem_link_code(self, code, telegram_id, username):
         self.calls.append(("redeem_link_code", (code, telegram_id, username)))
@@ -211,6 +245,26 @@ async def ctx(db, tmp_path):
     scheduler.ctx = context
 
     # Import the handler modules so their commands and callback actions register
-    from bot.handlers import admin, apps, fallback, link, mfa, misc, start  # noqa: F401
+    from bot.handlers import (  # noqa: F401
+        admin, apps, fallback, link, manage, mfa, misc, start,
+    )
 
     return context
+
+
+def account(**overrides: Any):
+    """A portal account as a lookup would answer with. An editor by default."""
+    from bot.services.portal import LinkedAccount
+
+    fields = {
+        "portal_user_id": "user-1",
+        "username": "tester",
+        "display_name": "Tester",
+        "is_admin": False,
+        "is_editor": True,
+        "is_approved": True,
+        "linked_at": "2026-01-01T00:00:00+00:00",
+        "mfa_enabled": False,
+    }
+    fields.update(overrides)
+    return LinkedAccount(**fields)

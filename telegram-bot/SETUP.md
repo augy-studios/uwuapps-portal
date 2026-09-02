@@ -75,6 +75,12 @@ status - Check that everything is running
 ever refuses, and advertising a command whose only answer is a refusal is worse
 than saying nothing. `/stats` answers admins alone.
 
+The management commands, `/manage`, `/add`, `/edit`, `/publish` and `/delete`,
+are absent for the same reason. They answer an operator listed in
+`ADMIN_TELEGRAM_IDS`, and any chat linked to a portal account that is approved
+and holds the editor or admin role. Everybody else gets the ordinary unknown
+command reply, and the people who can use them see them inside `/start`.
+
 This block is generated from the same registry that renders `/start`, so if you
 add a command later, regenerate it rather than editing by hand:
 

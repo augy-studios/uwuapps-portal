@@ -36,13 +36,15 @@ SEARCH_HINT = (
 
 
 async def start_body(ctx: Ctx, telegram_id: int) -> str:
-    return "\n\n".join(
-        [
-            INTRO,
-            "<b>Commands</b>\n" + command_list_html(include_admin=ctx.is_admin(telegram_id)),
-            SEARCH_HINT,
-        ]
+    from . import manage
+
+    # The management commands are listed for the people who can run them and
+    # for nobody else, from the same registry, so the list still cannot drift.
+    commands = command_list_html(
+        include_admin=ctx.is_admin(telegram_id),
+        include_manager=await manage.may_manage(ctx, telegram_id),
     )
+    return "\n\n".join([INTRO, "<b>Commands</b>\n" + commands, SEARCH_HINT])
 
 
 async def start_buttons(ctx: Ctx, telegram_id: int) -> list[list[rich.Btn]]:

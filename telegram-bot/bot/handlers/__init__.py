@@ -31,7 +31,8 @@ class Command:
     description: str
     handler: CommandHandler
     visible: bool = True       # shown in /start and in the BotFather list
-    admin_only: bool = False
+    admin_only: bool = False   # gated on ADMIN_TELEGRAM_IDS
+    manager_only: bool = False # gated on the linked account's portal role
     weight: int = 50           # display order, not registration order
     order: int = 0
 
@@ -46,12 +47,17 @@ def command(
     *,
     visible: bool = True,
     admin_only: bool = False,
+    manager_only: bool = False,
     weight: int = 50,
 ) -> Callable[[CommandHandler], CommandHandler]:
     """Register a command. The description is mandatory, deliberately.
 
     `weight` fixes the order the lists come out in, so it does not silently
     depend on the order the handler modules happen to be imported.
+
+    `admin_only` and `manager_only` are both enforced in one place, the
+    dispatcher below, and both answer a refusal with the ordinary unknown
+    command reply rather than a denial that confirms the command exists.
     """
 
     def decorator(func: CommandHandler) -> CommandHandler:
@@ -68,6 +74,7 @@ def command(
             handler=func,
             visible=visible,
             admin_only=admin_only,
+            manager_only=manager_only,
             weight=weight,
             order=_ORDER,
         )
@@ -84,18 +91,24 @@ def get(name: str) -> Command | None:
     return _COMMANDS.get(name.lstrip("/").lower())
 
 
-def visible_commands(*, include_admin: bool = False) -> list[Command]:
+def visible_commands(
+    *, include_admin: bool = False, include_manager: bool = False
+) -> list[Command]:
     return [
         c for c in all_commands()
-        if c.visible and (include_admin or not c.admin_only)
+        if c.visible
+        and (include_admin or not c.admin_only)
+        and (include_manager or not c.manager_only)
     ]
 
 
-def command_list_html(*, include_admin: bool = False) -> str:
+def command_list_html(
+    *, include_admin: bool = False, include_manager: bool = False
+) -> str:
     """The block `/start` renders. One line each, no bot name anywhere."""
     lines = [
         f"/{c.name} {rich.esc('- ' + c.description)}"
-        for c in visible_commands(include_admin=include_admin)
+        for c in visible_commands(include_admin=include_admin, include_manager=include_manager)
     ]
     return "\n".join(lines)
 
@@ -103,11 +116,11 @@ def command_list_html(*, include_admin: bool = False) -> str:
 def botfather_block() -> str:
     """Exactly what goes into Edit Commands. Same source as the /start list.
 
-    Admin commands are left out. The list is public, and advertising a command
-    that answers almost nobody is noise.
+    Admin and management commands are left out. The list is public, and
+    advertising a command that answers almost nobody is noise.
     """
     return "\n".join(
-        f"{c.name} - {c.description}" for c in visible_commands(include_admin=False)
+        f"{c.name} - {c.description}" for c in visible_commands()
     )
 
 
@@ -163,7 +176,7 @@ def _parse(text: str, username: str | None) -> tuple[str | None, str]:
 
 def register_all(ctx: Ctx) -> None:
     """Import the handler modules, then wire the two Telethon entry points."""
-    from . import admin, apps, fallback, link, mfa, misc, start  # noqa: F401
+    from . import admin, apps, fallback, link, manage, mfa, misc, start  # noqa: F401
 
     client = ctx.client
 
@@ -204,16 +217,20 @@ async def handle_message(event: Any, ctx: Ctx) -> None:
     username = getattr(ctx.me, "username", None)
     name, args = _parse(text, username)
 
-    from . import fallback, link
+    from . import fallback, link, manage
 
     started = time.monotonic()
     label = f"/{name}" if name else "text"
     succeeded = False
     try:
         if name is None:
-            # Two cases take priority over search, in this order.
+            # Three cases take priority over search, in this order. A half
+            # finished linking code beats a half finished app, because a link
+            # code expires in ten minutes and a draft waits indefinitely.
             if await link.consume_pending(event, text, ctx):
                 label = "/link"
+            elif await manage.consume_pending(event, text, ctx):
+                label = "/manage"
             else:
                 await fallback.free_text(event, text, ctx)
         else:
@@ -221,6 +238,8 @@ async def handle_message(event: Any, ctx: Ctx) -> None:
             if cmd is None:
                 await fallback.unknown_command(event, ctx)
             elif cmd.admin_only and not ctx.is_admin(telegram_id):
+                await fallback.unknown_command(event, ctx)
+            elif cmd.manager_only and not await manage.may_manage(ctx, telegram_id):
                 await fallback.unknown_command(event, ctx)
             else:
                 await cmd.handler(event, args, ctx)

@@ -179,6 +179,33 @@ class Portal:
         # An unauthenticated read sees published rows only, but be explicit about it.
         return [app for app in apps if app.get("published")]
 
+    # --- the directory, as a signed in account ------------------------------
+    #
+    # These four carry a Telegram id, and the portal turns it into the account
+    # that is acting. The shared secret proves where the call came from and
+    # never who is typing, so the role check happens there, not here.
+
+    async def list_all_apps(self, telegram_id: int) -> list[dict[str, Any]]:
+        """Everything the account may see, drafts included."""
+        data = await self._bot_post("app_list", {"telegramId": telegram_id})
+        return list(data.get("apps") or [])
+
+    async def create_app(self, telegram_id: int, app: dict[str, Any]) -> dict[str, Any]:
+        data = await self._bot_post("app_create", {"telegramId": telegram_id, "app": app})
+        return dict(data.get("app") or {})
+
+    async def update_app(
+        self, telegram_id: int, app_id: str, app: dict[str, Any]
+    ) -> dict[str, Any]:
+        data = await self._bot_post(
+            "app_update", {"telegramId": telegram_id, "id": app_id, "app": app}
+        )
+        return dict(data.get("app") or {})
+
+    async def delete_app(self, telegram_id: int, app_id: str) -> str:
+        data = await self._bot_post("app_delete", {"telegramId": telegram_id, "id": app_id})
+        return str(data.get("title") or "")
+
     # --- linking -----------------------------------------------------------
 
     async def redeem_link_code(

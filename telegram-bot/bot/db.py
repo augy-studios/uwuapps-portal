@@ -200,22 +200,28 @@ class Database:
         portal_username: str | None,
         display_name: str | None,
         is_admin: bool,
+        is_editor: bool = False,
+        is_approved: bool = False,
     ) -> None:
         now = iso()
         await self.execute(
             """
             insert into links (telegram_id, portal_user_id, portal_username,
-                               display_name, is_admin, linked_at, last_synced_at)
-            values (?, ?, ?, ?, ?, ?, ?)
+                               display_name, is_admin, is_editor, is_approved,
+                               linked_at, last_synced_at)
+            values (?, ?, ?, ?, ?, ?, ?, ?, ?)
             on conflict(telegram_id) do update set
                 portal_user_id  = excluded.portal_user_id,
                 portal_username = excluded.portal_username,
                 display_name    = excluded.display_name,
                 is_admin        = excluded.is_admin,
+                is_editor       = excluded.is_editor,
+                is_approved     = excluded.is_approved,
                 last_synced_at  = excluded.last_synced_at
             """,
             (telegram_id, portal_user_id, portal_username, display_name,
-             1 if is_admin else 0, now, now),
+             1 if is_admin else 0, 1 if is_editor else 0, 1 if is_approved else 0,
+             now, now),
         )
 
     async def log_command(
@@ -278,6 +284,46 @@ class Database:
             "delete from subscriptions where telegram_id = ? and topic = ?",
             (telegram_id, topic),
         )
+
+    # --- app drafts --------------------------------------------------------
+
+    async def get_app_draft(self, telegram_id: int) -> aiosqlite.Row | None:
+        return await self.fetchone(
+            "select * from app_drafts where telegram_id = ?", (telegram_id,)
+        )
+
+    async def save_app_draft(
+        self,
+        telegram_id: int,
+        *,
+        app_id: str | None,
+        fields: str,
+        touched: str,
+        awaiting: str | None,
+        chat_id: int | None,
+        message_id: int | None,
+    ) -> None:
+        """One draft per person, so writing one always replaces the last."""
+        now = iso()
+        await self.execute(
+            """
+            insert into app_drafts (telegram_id, app_id, fields, touched, awaiting,
+                                    chat_id, message_id, created_at, updated_at)
+            values (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            on conflict(telegram_id) do update set
+                app_id     = excluded.app_id,
+                fields     = excluded.fields,
+                touched    = excluded.touched,
+                awaiting   = excluded.awaiting,
+                chat_id    = excluded.chat_id,
+                message_id = excluded.message_id,
+                updated_at = excluded.updated_at
+            """,
+            (telegram_id, app_id, fields, touched, awaiting, chat_id, message_id, now, now),
+        )
+
+    async def delete_app_draft(self, telegram_id: int) -> None:
+        await self.execute("delete from app_drafts where telegram_id = ?", (telegram_id,))
 
     async def subscribers(self, topic: str) -> list[int]:
         rows = await self.fetchall(

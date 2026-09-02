@@ -15,6 +15,7 @@ from typing import Any
 
 from .. import callbacks, rich
 from ..context import Ctx
+from ..services import permissions
 from ..services.portal import PortalError, PortalUnavailable
 from . import command, portal_button, reply_id
 
@@ -242,7 +243,12 @@ async def redeem(event: Any, raw_code: str, ctx: Ctx, *, greeting: bool = False)
         account.username,
         account.display_name,
         account.is_admin,
+        account.is_editor,
+        account.is_approved,
     )
+    # A role cached a moment ago said this chat had no account. Drop it, so the
+    # management commands appear straight away rather than in five minutes.
+    await permissions.invalidate(ctx, telegram_id)
     log.info("Linked telegram id %s to a portal account", telegram_id)
 
     name = account.display_name or account.username or "your portal account"

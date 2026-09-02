@@ -12,6 +12,12 @@
 // does not open `unlink`, so the bot has no code path to detaching an account
 // even by accident. That is a property of this routing table, not a convention
 // somebody has to remember.
+//
+// The app_ actions are the same idea. The secret alone never authorises a
+// write: every one of them resolves the Telegram id to a linked account first,
+// and the account's own role decides what happens, exactly as it would in the
+// Admin Panel. So a stolen VPS gets whatever the accounts linked to it could
+// already do from a browser, and nothing more.
 
 import { supabase, resolveSession, verifyPassword, ok, err, cors } from './_supabase.js';
 import {
@@ -38,8 +44,18 @@ import {
     userById,
     verifyOtp
 } from './_mfa.js';
+import { buildCreate, buildPatch } from '../lib/uwu-apps.js';
 
-const BOT_ACTIONS = new Set(['redeem', 'lookup', 'mfa_resolve', 'mfa_issue_code']);
+const BOT_ACTIONS = new Set([
+    'redeem',
+    'lookup',
+    'mfa_resolve',
+    'mfa_issue_code',
+    'app_list',
+    'app_create',
+    'app_update',
+    'app_delete'
+]);
 
 const WEB_ACTIONS = new Set([
     'status',
@@ -463,6 +479,95 @@ export default async function handler(req, res) {
                 });
             }
 
+            /* --- the app directory, bot ----------------------------------- */
+
+            /**
+             * Everything the account may see, drafts included, which is what
+             * makes an unpublished app editable from a chat at all. The public
+             * GET /api/apps still shows published rows only.
+             */
+            case 'app_list': {
+                const user = await contributorFor(req.body.telegramId);
+
+                const { data, error } = await supabase
+                    .from('uwusuite_apps')
+                    .select(`
+                        id, title, description, url, tags,
+                        thumbnail_url, gallery_urls, thumbnail_index,
+                        published, sort_order, created_by, created_at, published_date
+                    `)
+                    .order('sort_order')
+                    .order('created_at', { ascending: false });
+                if (error) throw error;
+
+                return ok(res, { apps: data || [], user: serialize(user) });
+            }
+
+            case 'app_create': {
+                const user = await contributorFor(req.body.telegramId);
+
+                const { data, error } = await supabase
+                    .from('uwusuite_apps')
+                    .insert(buildCreate(req.body.app, user.id))
+                    .select()
+                    .single();
+                if (error) throw error;
+
+                return ok(res, { app: data });
+            }
+
+            /**
+             * The ownership rule is the one from /api/apps: an editor may only
+             * change an app they created, an admin may change any of them.
+             */
+            case 'app_update': {
+                const user = await contributorFor(req.body.telegramId);
+                const id = String(req.body.id || '');
+                if (!id) throw { status: 400, message: 'id is required' };
+
+                const existing = await appById(id);
+                if (!existing) throw { status: 404, message: 'That app is not in the directory', botCode: 'not_found' };
+                if (!user.is_admin && existing.created_by !== user.id) {
+                    throw {
+                        status: 403,
+                        message: 'That app belongs to somebody else, so only an admin can change it',
+                        botCode: 'not_yours'
+                    };
+                }
+
+                const { data, error } = await supabase
+                    .from('uwusuite_apps')
+                    .update(buildPatch(req.body.app, user.id))
+                    .eq('id', id)
+                    .select()
+                    .single();
+                if (error) throw error;
+
+                return ok(res, { app: data });
+            }
+
+            case 'app_delete': {
+                const user = await contributorFor(req.body.telegramId, { adminOnly: true });
+                const id = String(req.body.id || '');
+                if (!id) throw { status: 400, message: 'id is required' };
+
+                const existing = await appById(id);
+                if (!existing) throw { status: 404, message: 'That app is not in the directory', botCode: 'not_found' };
+
+                // Logged before it cascades away, same as the Admin Panel does.
+                await supabase.from('uwusuite_app_history').insert({
+                    app_id: id,
+                    user_id: user.id,
+                    event_type: 'deleted',
+                    description: `App "${existing.title}" was deleted`
+                });
+
+                const { error } = await supabase.from('uwusuite_apps').delete().eq('id', id);
+                if (error) throw error;
+
+                return ok(res, { title: existing.title });
+            }
+
             default:
                 throw { status: 400, message: `Unknown action: ${action}` };
         }
@@ -475,6 +580,46 @@ export default async function handler(req, res) {
         }
         return err(res, e);
     }
+}
+
+/**
+ * The Telegram id, resolved to the portal account that may act for it.
+ *
+ * A signature proves the call came from the VPS. It says nothing about who is
+ * typing, so this is where that question gets answered, and the answer is the
+ * same role check the Admin Panel applies: approved, and an editor or an admin.
+ * The machine readable codes let the chat explain the refusal in its own words.
+ */
+async function contributorFor(telegramId, { adminOnly = false } = {}) {
+    const id = Number(telegramId);
+    if (!Number.isFinite(id)) throw { status: 400, message: 'telegramId required' };
+
+    const link = await linkForTelegramId(id);
+    if (!link) {
+        throw { status: 403, message: 'That chat is not linked to an account', botCode: 'not_linked' };
+    }
+
+    const user = await userById(link.user_id);
+    if (!user || !user.is_approved || (!user.is_editor && !user.is_admin)) {
+        throw {
+            status: 403,
+            message: 'That account is not allowed to manage the directory',
+            botCode: 'not_allowed'
+        };
+    }
+    if (adminOnly && !user.is_admin) {
+        throw { status: 403, message: 'That is an admin only action', botCode: 'not_admin' };
+    }
+    return user;
+}
+
+async function appById(id) {
+    const { data } = await supabase
+        .from('uwusuite_apps')
+        .select('id, title, created_by, published')
+        .eq('id', id)
+        .single();
+    return data || null;
 }
 
 function serialize(user) {

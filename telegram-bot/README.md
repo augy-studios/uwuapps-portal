@@ -24,6 +24,11 @@ VPS, and the portal side changes that linking depends on.
 | `/status` | Uptime, database size, last successful portal call, jobs waiting |
 | `/stats` | Admin only, usage numbers for the last seven days |
 | `/unlink` | Explains that unlinking is done on the portal. It never unlinks anything, by design |
+| `/manage` | Editors and admins only. The way in to everything below |
+| `/add` | Editors and admins only. Opens a form and adds an app to the directory |
+| `/edit` | Editors and admins only. The same form, over an app that is already listed |
+| `/publish` | Editors and admins only. Publishes an app, or takes one back to a draft |
+| `/delete` | Admins only. Removes an app, after a confirmation |
 
 **Anything that is not a command is a search.** Type `wordle` in a private chat
 and it finds the app. One match opens the card directly, several show a page of
@@ -55,6 +60,81 @@ directory, so typing wordle finds the app.
 [ Open the web app ] [ Support the project ]
 [ Link my account ]
 ```
+
+---
+
+## Managing the directory
+
+The five management commands are not in the public command list and not in the
+`/start` list for people who cannot run them. Asking for one you cannot run gets
+the same unknown command reply as a typo, so the surface never announces itself.
+
+### Who gets in
+
+| | Sees the commands | May add and edit | May delete |
+| --- | --- | --- | --- |
+| Not linked | no, unless listed in `ADMIN_TELEGRAM_IDS` | no | no |
+| Linked, awaiting approval | no | no | no |
+| Linked viewer | no | no | no |
+| Linked editor | yes | own apps only | no |
+| Linked admin | yes | any app | yes |
+
+Two gates, deliberately different. Whether to *offer* a command is decided
+locally, from the role cached when the portal was last asked, so an outage does
+not hide the whole surface. Whether a *write* is allowed is decided by the
+portal, against the linked account, every single time. An operator listed in
+`ADMIN_TELEGRAM_IDS` is offered the commands, and still has to link an account
+before anything can be written, because the directory is changed as an account
+and never as an anonymous caller.
+
+### The form
+
+`/add` opens one message with a button per field. Press **Title**, send the
+title, and the message becomes the form again with the title filled in. Tags are
+buttons rather than typing, because the portal only accepts four of them. The
+whole flow lives in that one message, so a long draft leaves one message in the
+chat and not a column of them.
+
+```
+New app
+
+Title: Tip Splitter
+Link: https://tips.uwuapps.org
+Description: Split a bill and the service charge in Singapore
+Tags: tools, singapore
+Cover image: not set
+Published date: 2026-09-02
+Sort order: 10
+Visibility: Kept as a draft
+
+[ Title ] [ Link ]
+[ Description ] [ Tags ]
+[ Cover image ] [ Published date ]
+[ Sort order ]
+[ Publish it ]
+[ Save it ] [ Discard ]
+```
+
+A draft lives in SQLite, so a restart in the middle of one costs nothing. One
+draft is kept per person: `/add` while another is open offers to carry on with
+it or throw it away, which keeps resuming unambiguous.
+
+`/edit` and `/publish` and `/delete` all start with a picker. An editor is only
+shown the apps they created, since the portal refuses the rest, and offering a
+row that always ends in a refusal is worse than not offering it.
+
+An edit sends only the fields that were actually changed. An untouched gallery,
+or any column the chat does not model, is left exactly as the Admin Panel left
+it.
+
+### What is deliberately absent
+
+- **Uploading images.** A cover image is set by URL. Pictures belong in the
+  Admin Panel, which has the upload endpoint and a preview
+- **Deleting as an editor.** Deleting is an admin action on the portal, so it is
+  one here too. `/publish` takes an app back to a draft, which hides it from the
+  directory without losing the row
+- **Approving users, and changing roles.** Those stay on the portal
 
 ---
 

@@ -95,6 +95,8 @@ async def show_account(event: Any, ctx: Ctx, edit: Any = None) -> None:
             account.username,
             account.display_name,
             account.is_admin,
+            account.is_editor,
+            account.is_approved,
         )
         row = await ctx.db.get_link(telegram_id)
         if account.is_admin:

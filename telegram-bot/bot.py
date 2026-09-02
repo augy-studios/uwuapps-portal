@@ -37,7 +37,9 @@ log = logging.getLogger("uwu.main")
 def print_botfather_block() -> int:
     """Needs no credentials, so it works before .env is filled in."""
     from bot.handlers import botfather_block
-    from bot.handlers import admin, apps, fallback, link, mfa, misc, start  # noqa: F401
+    from bot.handlers import (  # noqa: F401
+        admin, apps, fallback, link, manage, mfa, misc, start,
+    )
 
     print(botfather_block())
     return 0
