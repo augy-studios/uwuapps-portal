@@ -1,4 +1,4 @@
-const CACHE_VERSION = "uwusuite-v11";
+const CACHE_VERSION = "uwusuite-v12";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const OFFLINE_URL = "/offline.html";

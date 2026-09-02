@@ -1000,7 +1000,26 @@ $('adminModal').addEventListener('click', async e => {
 });
 
 /* SEARCH / FILTER / SORT */
-$('searchInput').addEventListener('input', applyFilters);
+
+/* Chrome offers saved logins on any lone text field it decides could be a
+   username, and it ignores autocomplete="off" when it does. A field that is
+   readonly at the moment it is focused is never offered one, so the flag comes
+   off as focus lands. Touch drops it a beat earlier, on the tap itself, because
+   a readonly field does not raise the on screen keyboard. */
+const searchInput = $('searchInput');
+const allowSearchTyping = () => {
+    searchInput.readOnly = false;
+};
+searchInput.readOnly = true;
+searchInput.addEventListener('touchstart', allowSearchTyping, {
+    passive: true
+});
+searchInput.addEventListener('focus', allowSearchTyping);
+searchInput.addEventListener('blur', () => {
+    searchInput.readOnly = true;
+});
+
+searchInput.addEventListener('input', applyFilters);
 $('sortSelect').addEventListener('change', () => {
     activeSort = $('sortSelect').value;
     applyFilters();
