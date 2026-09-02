@@ -11,7 +11,7 @@ UwU Suite is a browsable directory of web apps built by [Augy Studios](https://g
 | Directory | What lives there |
 | --- | --- |
 | [main-site/](main-site/) | The portal itself. A static PWA plus Vercel serverless functions backed by Supabase. |
-| [telegram-bot/](telegram-bot/) | A Telethon based Telegram bot that fronts the portal. Planned, see the status note below. |
+| [telegram-bot/](telegram-bot/) | A Telethon based Telegram bot that fronts the portal, and the second factor behind portal sign ins. |
 
 ### [main-site/](main-site/)
 
@@ -20,16 +20,18 @@ The public site and its API.
 - Progressive web app, installable, with an offline fallback and a service worker
 - Installable from the Play Store as `org.uwuapps.portal`
 - Themeable, with a light and dark mode plus several colour themes
-- Serverless API under [main-site/api/](main-site/api/) covering [authentication](main-site/api/auth.js), the [app catalogue](main-site/api/apps.js), [user administration](main-site/api/users.js), and [uploads](main-site/api/upload.js)
+- Serverless API under [main-site/api/](main-site/api/) covering [authentication](main-site/api/auth.js), the [app catalogue](main-site/api/apps.js), [user administration](main-site/api/users.js), [uploads](main-site/api/upload.js), and the [Telegram link and second factor](main-site/api/telegram.js)
 - Deployed on Vercel, configured in [main-site/vercel.json](main-site/vercel.json)
 
 Start with [main-site/README.md](main-site/README.md) and [main-site/release-notes.md](main-site/release-notes.md).
 
 ### [telegram-bot/](telegram-bot/)
 
-A Telegram bot that lets people browse the directory, link their portal account, and hear about new apps without opening a browser. A linked account can also use Telegram as a second factor when signing in to the portal, either by approving a prompt or by pasting in a one time code. It runs on a Debian VPS inside tmux, stores everything in SQLite, and talks to the portal over the same API the website uses.
+A Telegram bot that lets people browse the directory, link their portal account, and hear about new apps without opening a browser. Editors and admins can also add, edit, publish and delete apps from a chat. A linked account can use Telegram as a second factor when signing in to the portal, either by approving a prompt or by pasting in a one time code. It runs on a Debian VPS inside tmux, stores everything in SQLite, and talks to the portal over the same API the website uses.
 
-**Status: specified, not yet built.** The build brief is not tracked in git, so ask a maintainer for `telegram-bot-spec.md` if you plan to work on it. Once the directory lands it will carry its own `README.md` and `SETUP.md`.
+Read [telegram-bot/README.md](telegram-bot/README.md) for what it does, and [telegram-bot/SETUP.md](telegram-bot/SETUP.md) for BotFather, the VPS, and the portal side changes that linking depends on.
+
+The portal half lives in [main-site/](main-site/): [api/telegram.js](main-site/api/telegram.js), [api/auth/magic.js](main-site/api/auth/magic.js), the Settings tab in the Admin Panel, and the schema in [sql/002_telegram_mfa.sql](main-site/sql/002_telegram_mfa.sql).
 
 ---
 
