@@ -1,0 +1,36 @@
+; Optional. tmux is the documented default, this is the reboot safety net.
+;
+;   sudo cp systemd/uwu-telegram-bot.service /etc/systemd/system/
+;   sudo systemctl daemon-reload
+;   sudo systemctl enable --now uwu-telegram-bot
+;   systemctl status uwu-telegram-bot
+;   journalctl -u uwu-telegram-bot -f
+;
+; Adjust User and WorkingDirectory to match the account that owns the clone.
+
+[Unit]
+Description=UwU Suite Telegram front end
+Documentation=https://github.com/augy-studios/uwuapps-portal
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=uwu
+Group=uwu
+WorkingDirectory=/home/uwu/uwuapps-portal/telegram-bot
+ExecStart=/home/uwu/uwuapps-portal/telegram-bot/run.sh
+Restart=on-failure
+RestartSec=10
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+; The bot writes only to data/ and logs/ inside its own directory
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/home/uwu/uwuapps-portal/telegram-bot/data /home/uwu/uwuapps-portal/telegram-bot/logs
+
+[Install]
+WantedBy=multi-user.target

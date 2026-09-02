@@ -1,0 +1,21 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+.env
+.env.*
+!.env.example
+
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# A leaked Telethon session file is a live credential
+*.session
+*.session-journal
+
+logs/
+*.log

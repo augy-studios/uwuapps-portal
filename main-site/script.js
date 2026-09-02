@@ -36,7 +36,7 @@ async function apiFetch(path, options = {}) {
     };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await signedFetch(path, {
+    const res = await fetch(path, {
         method: options.method || 'GET',
         headers,
         body: options.body ? JSON.stringify(options.body) : undefined
@@ -169,9 +169,6 @@ async function boot() {
                     action: 'me'
                 }
             });
-            if (res.signing_key && res.key_id) {
-                storeSigningKey(res.signing_key, res.key_id);
-            }
             currentUser = res.user;
         } catch (_) {
             session.clear();
@@ -179,10 +176,6 @@ async function boot() {
         }
     } else if (stored) {
         session.clear();
-    }
-
-    if (!currentUser) {
-        await initGuestKey('uwu-suite');
     }
 
     renderAuthUi();
@@ -260,40 +253,181 @@ $('authForm').addEventListener('submit', async e => {
                     password
                 }
             });
-            session.save({
-                token: res.token,
-                expiresAt: res.expiresAt,
-                user: res.user
-            });
-            if (res.signing_key && res.key_id) {
-                storeSigningKey(res.signing_key, res.key_id);
-            }
-            currentUser = res.user;
 
-            if (window.PasswordCredential) {
-                try {
-                    const cred = new PasswordCredential({ id: loginUsername, password });
-                    await navigator.credentials.store(cred);
-                } catch (_) {}
+            // The account has the second factor on, so there is no session yet.
+            // The login is held until it is approved from Telegram or a code is
+            // typed in below.
+            if (res.mfa_required) {
+                beginMfaStep(res, loginUsername, password);
+                return;
             }
 
-            if (!currentUser.isApproved) {
-                showToast('Your account is pending admin approval', 5000);
-            } else {
-                showToast(`Welcome back, ${currentUser.displayName || currentUser.username}!`);
-            }
-            closeModal('authModal');
-            renderAuthUi();
-            await loadApps();
+            await completeLogin(res, loginUsername, password);
         }
     } catch (e) {
         errEl.textContent = e.message || 'Something went wrong.';
         errEl.classList.remove('hidden');
     } finally {
         submitBtn.disabled = false;
-        setAuthMode(authMode);
+        if (!mfa.challengeId) setAuthMode(authMode);
     }
 });
+
+/* The tail of a login, shared by the ordinary path and all three second
+   factor paths, so the rest of the client code never has to know which one
+   produced the session. */
+async function completeLogin(res, loginUsername, password) {
+    session.save({
+        token: res.token,
+        expiresAt: res.expiresAt,
+        user: res.user
+    });
+    currentUser = res.user;
+
+    if (password && window.PasswordCredential) {
+        try {
+            const cred = new PasswordCredential({ id: loginUsername, password });
+            await navigator.credentials.store(cred);
+        } catch (_) {}
+    }
+
+    if (!currentUser.isApproved) {
+        showToast('Your account is pending admin approval', 5000);
+    } else {
+        showToast(`Welcome back, ${currentUser.displayName || currentUser.username}!`);
+    }
+    closeModal('authModal');
+    renderAuthUi();
+    await loadApps();
+}
+
+/* SECOND FACTOR, mid login */
+
+const mfa = {
+    challengeId: null,
+    poller: null,
+    username: null,
+    password: null,
+    recoveryMode: false
+};
+
+function beginMfaStep(res, loginUsername, password) {
+    mfa.challengeId = res.challenge_id;
+    mfa.username = loginUsername;
+    mfa.password = password;
+    mfa.recoveryMode = false;
+
+    $('authForm').classList.add('hidden');
+    $('authFootnote').classList.add('hidden');
+    document.querySelector('.auth-tabs').classList.add('hidden');
+    $('authModalTitle').textContent = 'One more step';
+    $('mfaStep').classList.remove('hidden');
+    $('mfaMatchNumber').textContent = res.match_number ?? '--';
+    $('mfaError').classList.add('hidden');
+    $('mfaCodeInput').value = '';
+    $('mfaCodeInput').focus();
+
+    // If the prompt could not be delivered, say so and point at the recovery
+    // codes immediately rather than leaving a spinner running.
+    if (res.prompt_delivered === false) {
+        $('mfaStepIntro').textContent =
+            'The approval prompt could not be delivered to Telegram. Use a recovery code below.';
+        setRecoveryMode(true);
+    }
+
+    mfa.poller = setInterval(pollMfa, 2500);
+}
+
+function endMfaStep() {
+    clearInterval(mfa.poller);
+    mfa.poller = null;
+    mfa.challengeId = null;
+    mfa.password = null;
+    mfa.recoveryMode = false;
+    $('mfaStep').classList.add('hidden');
+    $('authForm').classList.remove('hidden');
+    $('authFootnote').classList.remove('hidden');
+    document.querySelector('.auth-tabs').classList.remove('hidden');
+    setAuthMode('login');
+}
+
+function setRecoveryMode(on) {
+    mfa.recoveryMode = on;
+    const input = $('mfaCodeInput');
+    input.value = '';
+    input.maxLength = on ? 10 : 6;
+    input.placeholder = on ? 'RECOVERYCD' : '123456';
+    input.inputMode = on ? 'text' : 'numeric';
+    $('mfaUseRecoveryBtn').textContent = on
+        ? 'Use the six digit code instead'
+        : 'Use a recovery code instead';
+}
+
+async function pollMfa() {
+    if (!mfa.challengeId) return;
+    try {
+        const res = await apiFetch('/api/auth', {
+            method: 'POST',
+            body: { action: 'mfa_status', challenge_id: mfa.challengeId }
+        });
+        if (res.status === 'pending') return;
+        if (res.status === 'approved') {
+            const username = mfa.username;
+            const password = mfa.password;
+            endMfaStep();
+            await completeLogin(res, username, password);
+            return;
+        }
+        showMfaFailure(res.message || 'That sign in request is no longer valid.');
+    } catch (e) {
+        // A network blip while polling is not worth a scary message. A dead
+        // challenge answers with a message, and that is handled above.
+        if (e.status === 404 || e.status === 429) {
+            showMfaFailure(e.message || 'That sign in request is no longer valid.');
+        }
+    }
+}
+
+function showMfaFailure(message) {
+    clearInterval(mfa.poller);
+    mfa.poller = null;
+    $('mfaError').textContent = message;
+    $('mfaError').classList.remove('hidden');
+    $('mfaVerifyBtn').disabled = true;
+}
+
+$('mfaVerifyBtn').addEventListener('click', async () => {
+    const value = $('mfaCodeInput').value.trim();
+    if (!value) return;
+    const btn = $('mfaVerifyBtn');
+    btn.disabled = true;
+    $('mfaError').classList.add('hidden');
+    try {
+        const body = mfa.recoveryMode
+            ? { action: 'mfa_recover', challenge_id: mfa.challengeId, recovery_code: value }
+            : { action: 'mfa_verify_code', challenge_id: mfa.challengeId, code: value };
+        const res = await apiFetch('/api/auth', { method: 'POST', body });
+        const username = mfa.username;
+        const password = mfa.password;
+        endMfaStep();
+        await completeLogin(res, username, password);
+    } catch (e) {
+        $('mfaError').textContent = e.message || 'That did not work.';
+        $('mfaError').classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+    }
+});
+
+$('mfaCodeInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        $('mfaVerifyBtn').click();
+    }
+});
+
+$('mfaUseRecoveryBtn').addEventListener('click', () => setRecoveryMode(!mfa.recoveryMode));
+$('mfaCancelBtn').addEventListener('click', endMfaStep);
 
 $('logoutBtn').addEventListener('click', async () => {
     try {
@@ -305,7 +439,6 @@ $('logoutBtn').addEventListener('click', async () => {
         });
     } catch (_) {}
     session.clear();
-    clearSigningKey();
     currentUser = null;
     $('userDropdown').classList.remove('open');
     renderAuthUi();
@@ -705,6 +838,9 @@ document.querySelectorAll('.admin-tab').forEach(btn => {
         btn.classList.add('active');
         const key = btn.dataset.panel;
         $('panel' + key.charAt(0).toUpperCase() + key.slice(1)).classList.add('active');
+        // Settings holds live state rather than a table loaded with the others,
+        // so it fetches when it is opened.
+        if (key === 'Settings') loadTelegramSettings();
     });
 });
 
@@ -899,3 +1035,360 @@ document.addEventListener('keydown', e => {
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 }
+
+/* =========================================================
+   SETTINGS TAB, Telegram linking and the second factor
+   =========================================================
+   The bot can redeem a linking code but can never create one, because minting
+   needs a signed in portal session. This tab is that entry point. Unlinking
+   also lives here and nowhere else, so detaching an account costs the portal
+   session as well as the chat. */
+
+const tg = {
+    state: null,
+    code: null,
+    codeExpiresAt: null,
+    poller: null,
+    countdown: null,
+    enrollChallengeId: null,
+    enrollPoller: null,
+    unlinkExpiresAt: null,
+    unlinkCountdown: null,
+    passwordIntent: null
+};
+
+async function telegramFetch(body) {
+    return apiFetch('/api/telegram', { method: 'POST', body });
+}
+
+function showOnly(ids, visible) {
+    ids.forEach(id => $(id).classList.toggle('hidden', id !== visible));
+}
+
+function stopLinkPolling() {
+    clearInterval(tg.poller);
+    clearInterval(tg.countdown);
+    tg.poller = null;
+    tg.countdown = null;
+}
+
+async function loadTelegramSettings() {
+    try {
+        tg.state = await telegramFetch({ action: 'status' });
+    } catch (e) {
+        showToast('Could not load the Telegram settings: ' + e.message);
+        return;
+    }
+    renderTelegramSettings();
+}
+
+function renderTelegramSettings() {
+    const state = tg.state || { linked: false, mfaEnabled: false };
+
+    if (state.linked) {
+        stopLinkPolling();
+        showOnly(['tgUnlinked', 'tgWaiting', 'tgLinked'], 'tgLinked');
+        $('tgAccount').textContent = state.telegramUsername
+            ? '@' + state.telegramUsername
+            : 'Telegram id ' + state.telegramId;
+        $('tgLinkedAt').textContent = formatDate(state.linkedAt || '');
+    } else if (tg.code) {
+        showOnly(['tgUnlinked', 'tgWaiting', 'tgLinked'], 'tgWaiting');
+    } else {
+        showOnly(['tgUnlinked', 'tgWaiting', 'tgLinked'], 'tgUnlinked');
+    }
+
+    // The second factor only makes sense once an account is linked.
+    const toggle = $('mfaToggle');
+    toggle.disabled = !state.linked;
+    toggle.checked = !!state.mfaEnabled;
+    $('mfaToggleLabel').textContent = state.mfaEnabled ? 'On' : 'Off';
+    $('mfaHint').textContent = state.linked
+        ? 'With this on, a correct password alone no longer signs you in. The sign in is held until you approve it from the linked chat, or type the code that arrives with it.'
+        : 'Link Telegram above first. The second factor needs somewhere to send the approval.';
+
+    $('mfaOnDetail').classList.toggle('hidden', !state.mfaEnabled);
+    if (state.mfaEnabled) {
+        $('mfaRecoveryCount').textContent = 'Recovery codes left: ' + (state.recoveryCodesLeft ?? 0);
+        renderMfaAudit(state.recentApprovals || []);
+    }
+
+    // Unlinking while the second factor is on would be a password free way to
+    // strip it off a hijacked session, so the two stay separate and ordered.
+    $('tgUnlinkBtn').disabled = !!state.mfaEnabled;
+    $('tgUnlinkBtn').title = state.mfaEnabled ? 'Turn two factor authentication off first' : '';
+}
+
+function renderMfaAudit(rows) {
+    const tbody = $('mfaAuditTable').querySelector('tbody');
+    tbody.innerHTML = '';
+    $('mfaAuditEmpty').classList.toggle('hidden', rows.length > 0);
+    rows.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+      <td>${formatDate(row.resolved_at || row.created_at || '')}</td>
+      <td>${escHtml(row.device || '-')}</td>
+      <td><span class="role-badge">${escHtml(row.status)}</span></td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+/* Linking */
+
+async function requestLinkCode(openTab) {
+    try {
+        const res = await telegramFetch({ action: 'issue_code' });
+        tg.code = res.code;
+        tg.codeExpiresAt = new Date(res.expiresAt);
+        $('tgCode').textContent = res.code;
+        renderTelegramSettings();
+        startLinkWatch();
+        // The deep link carries the code as the start payload, which is what
+        // turns a plain Start press into a redeemed link.
+        if (openTab) window.open(res.deepLink, '_blank', 'noopener');
+    } catch (e) {
+        showToast('Could not make a code: ' + e.message);
+    }
+}
+
+function startLinkWatch() {
+    stopLinkPolling();
+    tg.poller = setInterval(async () => {
+        try {
+            const res = await telegramFetch({ action: 'status' });
+            if (res.linked) {
+                tg.state = res;
+                tg.code = null;
+                showToast('Telegram is linked');
+                renderTelegramSettings();
+            }
+        } catch (_) {}
+    }, 4000);
+
+    tg.countdown = setInterval(() => {
+        const left = Math.max(0, Math.round((tg.codeExpiresAt - Date.now()) / 1000));
+        $('tgCountdown').textContent = left
+            ? 'This code expires in ' + Math.floor(left / 60) + 'm ' + String(left % 60).padStart(2, '0') + 's.'
+            : 'This code has expired. Generate a new one.';
+        if (!left) stopLinkPolling();
+    }, 1000);
+}
+
+$('tgLinkBtn').addEventListener('click', () => requestLinkCode(true));
+$('tgNewCodeBtn').addEventListener('click', () => requestLinkCode(true));
+$('tgCancelWaitBtn').addEventListener('click', () => {
+    stopLinkPolling();
+    tg.code = null;
+    renderTelegramSettings();
+});
+
+// A code consumed in the other tab shows up the moment this one comes back.
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && tg.code && !$('adminModal').classList.contains('hidden')) {
+        loadTelegramSettings();
+    }
+});
+
+/* Unlinking, three deliberate presses */
+
+$('tgUnlinkBtn').addEventListener('click', () => {
+    $('unlinkStep1').classList.remove('hidden');
+    $('unlinkStep2').classList.add('hidden');
+    $('unlinkError').classList.add('hidden');
+    $('unlinkCode').value = '';
+    openModal('unlinkModal');
+});
+
+$('unlinkContinueBtn').addEventListener('click', async () => {
+    const btn = $('unlinkContinueBtn');
+    btn.disabled = true;
+    try {
+        const res = await telegramFetch({ action: 'unlink_request' });
+        tg.unlinkExpiresAt = new Date(res.expiresAt);
+        $('unlinkStep1').classList.add('hidden');
+        $('unlinkStep2').classList.remove('hidden');
+        $('unlinkCode').focus();
+        startUnlinkCountdown();
+    } catch (e) {
+        showToast(e.message || 'Could not send the confirmation code');
+    } finally {
+        btn.disabled = false;
+    }
+});
+
+function startUnlinkCountdown() {
+    clearInterval(tg.unlinkCountdown);
+    const sentAt = Date.now();
+    tg.unlinkCountdown = setInterval(() => {
+        const left = Math.max(0, Math.round((tg.unlinkExpiresAt - Date.now()) / 1000));
+        $('unlinkCountdown').textContent = left
+            ? 'The code expires in ' + Math.floor(left / 60) + 'm ' + String(left % 60).padStart(2, '0') + 's.'
+            : 'That code has expired. Send a new one.';
+        // Only worth resending once the first one is old enough to be lost.
+        $('unlinkResendBtn').disabled = (Date.now() - sentAt) < 45000;
+        if (!left) clearInterval(tg.unlinkCountdown);
+    }, 1000);
+}
+
+$('unlinkResendBtn').addEventListener('click', () => $('unlinkContinueBtn').click());
+
+$('unlinkConfirmBtn').addEventListener('click', async () => {
+    const btn = $('unlinkConfirmBtn');
+    btn.disabled = true;
+    $('unlinkError').classList.add('hidden');
+    try {
+        await telegramFetch({ action: 'unlink', code: $('unlinkCode').value.trim() });
+        clearInterval(tg.unlinkCountdown);
+        closeModal('unlinkModal');
+        showToast('Telegram is no longer linked');
+        tg.code = null;
+        await loadTelegramSettings();
+    } catch (e) {
+        $('unlinkError').textContent = e.message || 'That did not work.';
+        $('unlinkError').classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+    }
+});
+
+/* The second factor */
+
+$('mfaToggle').addEventListener('change', async e => {
+    if (e.target.checked) {
+        await startEnrolment();
+    } else {
+        // Put it back until the password confirms, so the control never lies
+        // about the state of the account.
+        e.target.checked = true;
+        askForPassword('disable', 'Enter your password to turn two factor authentication off.');
+    }
+});
+
+async function startEnrolment() {
+    $('mfaToggle').disabled = true;
+    try {
+        const res = await telegramFetch({ action: 'mfa_enroll' });
+        tg.enrollChallengeId = res.challenge_id;
+        $('mfaEnrollMatch').textContent = res.match_number;
+        $('mfaEnrolling').classList.remove('hidden');
+        // The toggle only flips once the test approval comes back, so nobody
+        // locks themselves out of an account whose chat is broken or blocked.
+        tg.enrollPoller = setInterval(pollEnrolment, 2500);
+    } catch (e) {
+        $('mfaToggle').checked = false;
+        $('mfaToggle').disabled = false;
+        showToast(e.message || 'Could not start the test approval');
+    }
+}
+
+function stopEnrolment() {
+    clearInterval(tg.enrollPoller);
+    tg.enrollPoller = null;
+    tg.enrollChallengeId = null;
+    $('mfaEnrolling').classList.add('hidden');
+    $('mfaToggle').disabled = false;
+}
+
+async function pollEnrolment() {
+    if (!tg.enrollChallengeId) return;
+    try {
+        const res = await telegramFetch({
+            action: 'mfa_enroll_status',
+            challenge_id: tg.enrollChallengeId
+        });
+        if (res.status === 'pending') return;
+        stopEnrolment();
+        if (res.status !== 'approved') {
+            $('mfaToggle').checked = false;
+            showToast('The test approval was not completed, so nothing changed');
+            return;
+        }
+        if (res.recoveryCodes) revealRecoveryCodes(res.recoveryCodes);
+        await loadTelegramSettings();
+    } catch (e) {
+        stopEnrolment();
+        $('mfaToggle').checked = false;
+        showToast(e.message || 'The test approval could not be confirmed');
+    }
+}
+
+$('mfaEnrollCancelBtn').addEventListener('click', () => {
+    stopEnrolment();
+    $('mfaToggle').checked = false;
+});
+
+function revealRecoveryCodes(codes) {
+    $('mfaRecoveryCodes').textContent = codes.join('\n');
+    $('mfaRecoveryReveal').classList.remove('hidden');
+}
+
+$('mfaCopyCodesBtn').addEventListener('click', async () => {
+    try {
+        await navigator.clipboard.writeText($('mfaRecoveryCodes').textContent);
+        showToast('Recovery codes copied');
+    } catch (_) {
+        showToast('Select the codes and copy them by hand');
+    }
+});
+
+$('mfaSavedCodesBtn').addEventListener('click', () => {
+    $('mfaRecoveryCodes').textContent = '';
+    $('mfaRecoveryReveal').classList.add('hidden');
+});
+
+$('mfaRegenBtn').addEventListener('click', () =>
+    askForPassword('regenerate', 'Enter your password to replace every recovery code.')
+);
+
+function askForPassword(intent, prompt) {
+    tg.passwordIntent = intent;
+    $('mfaPasswordPrompt').textContent = prompt;
+    $('mfaPassword').value = '';
+    $('mfaPasswordError').classList.add('hidden');
+    $('mfaPasswordRow').classList.remove('hidden');
+    $('mfaPassword').focus();
+}
+
+function closePasswordRow() {
+    tg.passwordIntent = null;
+    $('mfaPassword').value = '';
+    $('mfaPasswordRow').classList.add('hidden');
+}
+
+$('mfaPasswordCancelBtn').addEventListener('click', () => {
+    closePasswordRow();
+    renderTelegramSettings();
+});
+
+$('mfaPassword').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        $('mfaPasswordConfirmBtn').click();
+    }
+});
+
+$('mfaPasswordConfirmBtn').addEventListener('click', async () => {
+    const password = $('mfaPassword').value;
+    if (!password) return;
+    const btn = $('mfaPasswordConfirmBtn');
+    btn.disabled = true;
+    $('mfaPasswordError').classList.add('hidden');
+    try {
+        if (tg.passwordIntent === 'disable') {
+            await telegramFetch({ action: 'mfa_disable', password });
+            closePasswordRow();
+            showToast('Two factor authentication is off');
+            await loadTelegramSettings();
+        } else if (tg.passwordIntent === 'regenerate') {
+            const res = await telegramFetch({ action: 'mfa_regenerate_recovery', password });
+            closePasswordRow();
+            revealRecoveryCodes(res.recoveryCodes);
+            await loadTelegramSettings();
+        }
+    } catch (e) {
+        $('mfaPasswordError').textContent = e.message || 'That did not work.';
+        $('mfaPasswordError').classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+    }
+});

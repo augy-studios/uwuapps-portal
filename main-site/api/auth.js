@@ -5,15 +5,23 @@ import {
     supabase,
     hashPassword,
     verifyPassword,
-    generateSessionToken,
     resolveSession,
     serializeUser,
     ok,
     err,
     cors
 } from './_supabase.js';
-import { verifySignedRequest } from '../lib/uwu-request-signing-server.js';
-import { randomBytes } from 'node:crypto';
+import { MAX_POLLS_PER_CHALLENGE } from '../lib/uwu-telegram.js';
+import {
+    completeChallenge,
+    consumeRecoveryCode,
+    createChallenge,
+    createSession,
+    linkForUser,
+    loadChallenge,
+    markChallenge,
+    verifyOtp
+} from './_mfa.js';
 
 export default async function handler(req, res) {
     if (cors(req, res)) return;
@@ -25,12 +33,6 @@ export default async function handler(req, res) {
     const {
         action
     } = req.body || {};
-
-    const EXEMPT_ACTIONS = ['login', 'register', 'me'];
-    if (!EXEMPT_ACTIONS.includes(action)) {
-        const sig = await verifySignedRequest(req, supabase);
-        if (!sig.valid) return res.status(403).json({ ok: false, error: sig.reason });
-    }
 
     try {
         switch (action) {
@@ -166,48 +168,94 @@ export default async function handler(req, res) {
                     message: 'Invalid email or password'
                 };
 
-                // Create DB session token
-                const token = generateSessionToken();
-                const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days
+                // The password check runs before any challenge is sent, so
+                // knowing a username cannot be turned into a way to spam a
+                // stranger's chat with approval prompts.
+                const link = await linkForUser(user.id);
 
-                const {
-                    error: sessionErr
-                } = await supabase
-                    .from('uwusuite_sessions')
-                    .insert({
-                        user_id: user.id,
-                        token,
-                        expires_at: expiresAt
-                    });
+                // No link, or the second factor off, and login proceeds exactly
+                // as it did before. Nothing changes for accounts that have not
+                // opted in, and there is no extra round trip.
+                if (!link || !link.mfa_enabled) {
+                    return ok(res, await createSession(user));
+                }
 
-                if (sessionErr) throw {
-                    status: 500,
-                    message: 'Could not create session'
-                };
-
-                // Issue signing key
-                const signingKey = randomBytes(32).toString('hex');
-                const { data: skData, error: skErr } = await supabase
-                    .from('uwu_signing_keys')
-                    .insert({
-                        session_token: token,
-                        signing_key: signingKey,
-                        is_guest: false,
-                        app_id: 'portal',
-                        expires_at: expiresAt
-                    })
-                    .select('id')
-                    .single();
-
-                if (skErr) throw { status: 500, message: 'Could not issue signing key' };
+                // Second factor on, so no session yet.
+                const { challenge, matchNumber, delivered } = await createChallenge(user, link, req);
 
                 return ok(res, {
-                    token,
-                    expiresAt,
-                    user: serializeUser(user),
-                    signing_key: signingKey,
-                    key_id: skData.id
+                    mfa_required: true,
+                    challenge_id: challenge.id,
+                    match_number: matchNumber,
+                    expires_at: challenge.expires_at,
+                    // The prompt could not be delivered, so offer the recovery
+                    // code entry immediately rather than a spinner that never ends.
+                    prompt_delivered: delivered
                 });
+            }
+
+            // Poll for the outcome of a challenge, mid login.
+            // The challenge id is the only thing the polling client presents,
+            // which is why it is unguessable.
+            case 'mfa_status': {
+                const challenge = await requirePendingOrResolved(req.body.challenge_id);
+
+                if (challenge.poll_count >= MAX_POLLS_PER_CHALLENGE) {
+                    throw { status: 429, message: 'Too many checks, please start the sign in again' };
+                }
+                await supabase
+                    .from('uwusuite_mfa_challenges')
+                    .update({
+                        poll_count: challenge.poll_count + 1,
+                        last_poll_at: new Date().toISOString()
+                    })
+                    .eq('id', challenge.id);
+
+                if (challenge.status === 'pending') return ok(res, { status: 'pending' });
+                if (challenge.status !== 'approved') {
+                    return ok(res, {
+                        status: challenge.status,
+                        message: challenge.status === 'denied'
+                            ? 'That sign in was stopped. Change your password now.'
+                            : 'That sign in request expired. Please try again.'
+                    });
+                }
+
+                return ok(res, { status: 'approved', ...(await completeChallenge(challenge)) });
+            }
+
+            // A code typed into the waiting page. The code binds to the user,
+            // not to the challenge, so it survives a page reload, and the check
+            // is that the code belongs to the same user the challenge does.
+            case 'mfa_verify_code': {
+                const challenge = await requirePendingOrResolved(req.body.challenge_id);
+                if (challenge.status !== 'pending') {
+                    throw { status: 409, message: 'That sign in request is no longer waiting' };
+                }
+
+                const check = await verifyOtp(challenge.user_id, 'login', req.body.code);
+                if (!check.ok) throw { status: 400, message: check.reason };
+
+                const resolved = await markChallenge(challenge.id, 'approved');
+                if (!resolved) throw { status: 409, message: 'That sign in request is no longer waiting' };
+
+                return ok(res, { status: 'approved', ...(await completeChallenge(resolved)) });
+            }
+
+            // The path that works with the chat unreachable and the bot stopped.
+            case 'mfa_recover': {
+                const challenge = await requirePendingOrResolved(req.body.challenge_id);
+                if (challenge.status !== 'pending') {
+                    throw { status: 409, message: 'That sign in request is no longer waiting' };
+                }
+
+                const consumed = await consumeRecoveryCode(challenge.user_id, req.body.recovery_code);
+                if (!consumed) throw { status: 400, message: 'That recovery code is not right' };
+
+                const resolved = await markChallenge(challenge.id, 'approved');
+                if (!resolved) throw { status: 409, message: 'That sign in request is no longer waiting' };
+
+                return ok(res, { status: 'approved', ...(await completeChallenge(resolved)) });
             }
 
             // Me, validate token + return user
@@ -218,29 +266,8 @@ export default async function handler(req, res) {
                     message: 'Not authenticated or session expired'
                 };
 
-                // Refresh signing key for this session
-                const meToken = (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '').trim();
-                const meSigningKey = randomBytes(32).toString('hex');
-                const meExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-
-                // Upsert: replace any existing key for this session
-                await supabase.from('uwu_signing_keys').delete().eq('session_token', meToken);
-                const { data: meSkData } = await supabase
-                    .from('uwu_signing_keys')
-                    .insert({
-                        session_token: meToken,
-                        signing_key: meSigningKey,
-                        is_guest: false,
-                        app_id: 'portal',
-                        expires_at: meExpiry
-                    })
-                    .select('id')
-                    .single();
-
                 return ok(res, {
-                    user: serializeUser(user),
-                    signing_key: meSigningKey,
-                    key_id: meSkData?.id
+                    user: serializeUser(user)
                 });
             }
 
@@ -249,7 +276,6 @@ export default async function handler(req, res) {
                 const auth = req.headers['authorization'] || '';
                 const logoutToken = auth.replace(/^Bearer\s+/i, '').trim();
                 if (logoutToken) {
-                    await supabase.from('uwu_signing_keys').delete().eq('session_token', logoutToken);
                     await supabase.from('uwusuite_sessions').delete().eq('token', logoutToken);
                 }
                 return ok(res, {
@@ -265,4 +291,16 @@ export default async function handler(req, res) {
     } catch (e) {
         return err(res, e);
     }
+}
+
+/**
+ * Loads a challenge for one of the three mid login actions.
+ *
+ * The reason for a refusal is never leaked beyond this, since the page is
+ * reachable by anyone holding the password.
+ */
+async function requirePendingOrResolved(challengeId) {
+    const challenge = await loadChallenge(challengeId);
+    if (!challenge) throw { status: 404, message: 'That sign in request is no longer valid' };
+    return challenge;
 }

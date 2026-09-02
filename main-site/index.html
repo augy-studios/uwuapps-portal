@@ -207,6 +207,28 @@
                 New here? <button class="link-btn" data-tab="register">Create an account</button><br />
                 <small>New accounts require admin approval before you can contribute.</small>
             </p>
+
+            <!-- Held login, waiting on the second factor -->
+            <div class="mfa-step hidden" id="mfaStep">
+                <p class="settings-hint" id="mfaStepIntro">
+                    Approve the sign in from your Telegram chat, or type the code that
+                    arrived with it.
+                </p>
+                <p class="settings-hint">Match number</p>
+                <p class="match-number" id="mfaMatchNumber">--</p>
+                <p class="settings-hint">Approve only if your chat shows the same number.</p>
+
+                <input type="text" id="mfaCodeInput" inputmode="numeric" autocomplete="one-time-code"
+                    maxlength="6" placeholder="123456" class="code-input" />
+                <div class="auth-error hidden" id="mfaError"></div>
+                <button type="button" class="btn btn-primary btn-full" id="mfaVerifyBtn">Sign in</button>
+
+                <p class="auth-footnote">
+                    <button class="link-btn" id="mfaUseRecoveryBtn">Use a recovery code instead</button>
+                    <br />
+                    <button class="link-btn" id="mfaCancelBtn">Cancel and start again</button>
+                </p>
+            </div>
         </div>
     </div>
 
@@ -314,6 +336,7 @@
                 <button class="admin-tab active" data-panel="Pending"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Pending</button>
                 <button class="admin-tab" data-panel="Users"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Users</button>
                 <button class="admin-tab" data-panel="Preapproved"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Pre-approve</button>
+                <button class="admin-tab" data-panel="Settings"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Settings</button>
             </div>
 
             <div class="admin-panel active" id="panelPending">
@@ -376,6 +399,155 @@
                 </table>
                 <p class="table-empty hidden" id="preapprovedEmpty">No pre-approvals yet.</p>
             </div>
+
+            <!-- Settings, Telegram linking and the second factor -->
+            <div class="admin-panel" id="panelSettings">
+                <section class="settings-section">
+                    <h3 class="settings-title">Telegram</h3>
+                    <p class="settings-hint">
+                        Linking lets you browse the directory from Telegram, and it is what
+                        the second factor below uses to reach you.
+                    </p>
+
+                    <!-- Not linked yet -->
+                    <div id="tgUnlinked" class="hidden">
+                        <p class="settings-hint">This account is not linked to Telegram yet.</p>
+                        <button class="btn btn-primary" id="tgLinkBtn">Link Telegram</button>
+                    </div>
+
+                    <!-- Waiting on the code being redeemed -->
+                    <div id="tgWaiting" class="hidden">
+                        <p class="settings-hint">
+                            A tab has opened in Telegram. Press Start there and the link is made.
+                            If that did not work, send this code in the chat as
+                            <code>/link YOURCODE</code>.
+                        </p>
+                        <p class="settings-code" id="tgCode">--------</p>
+                        <p class="settings-hint" id="tgCountdown">This code expires in 10 minutes.</p>
+                        <div class="settings-actions">
+                            <button class="btn btn-ghost" id="tgNewCodeBtn">Generate a new code</button>
+                            <button class="btn btn-ghost" id="tgCancelWaitBtn">Cancel</button>
+                        </div>
+                    </div>
+
+                    <!-- Linked -->
+                    <div id="tgLinked" class="hidden">
+                        <dl class="settings-facts">
+                            <dt>Account</dt>
+                            <dd id="tgAccount">-</dd>
+                            <dt>Linked</dt>
+                            <dd id="tgLinkedAt">-</dd>
+                        </dl>
+                        <button class="btn btn-danger" id="tgUnlinkBtn">Unlink</button>
+                    </div>
+                </section>
+
+                <section class="settings-section">
+                    <h3 class="settings-title">Two factor authentication</h3>
+                    <p class="settings-hint" id="mfaHint">
+                        With this on, a correct password alone no longer signs you in. The
+                        sign in is held until you approve it from the linked chat, or type
+                        the code that arrives with it.
+                    </p>
+
+                    <label class="toggle-label">
+                        <input type="checkbox" id="mfaToggle" />
+                        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                        <span id="mfaToggleLabel">Off</span>
+                    </label>
+
+                    <div id="mfaEnrolling" class="hidden">
+                        <p class="settings-hint">
+                            A test approval has been sent to your chat. Approve it there and
+                            this flips on. Match number
+                            <b id="mfaEnrollMatch">--</b>.
+                        </p>
+                        <button class="btn btn-ghost" id="mfaEnrollCancelBtn">Cancel</button>
+                    </div>
+
+                    <!-- Turning it off, and regenerating, both cost the current
+                         password, so a hijacked browser session cannot quietly
+                         remove the second factor. -->
+                    <div id="mfaPasswordRow" class="hidden">
+                        <p class="settings-hint" id="mfaPasswordPrompt">Enter your password to continue.</p>
+                        <input type="password" id="mfaPassword" autocomplete="current-password"
+                            placeholder="Your password" class="code-input"
+                            style="letter-spacing:normal;text-align:left;font-family:inherit" />
+                        <div class="auth-error hidden" id="mfaPasswordError"></div>
+                        <div class="settings-actions">
+                            <button class="btn btn-primary" id="mfaPasswordConfirmBtn">Confirm</button>
+                            <button class="btn btn-ghost" id="mfaPasswordCancelBtn">Cancel</button>
+                        </div>
+                    </div>
+
+                    <div id="mfaRecoveryReveal" class="hidden">
+                        <p class="settings-hint">
+                            <b>Save these recovery codes now.</b> They are shown once. Each one
+                            signs you in without Telegram, and each works only once.
+                        </p>
+                        <pre class="settings-codes" id="mfaRecoveryCodes"></pre>
+                        <div class="settings-actions">
+                            <button class="btn btn-ghost" id="mfaCopyCodesBtn">Copy the codes</button>
+                            <button class="btn btn-primary" id="mfaSavedCodesBtn">I have saved these</button>
+                        </div>
+                    </div>
+
+                    <div id="mfaOnDetail" class="hidden">
+                        <p class="settings-hint" id="mfaRecoveryCount">Recovery codes left: -</p>
+                        <button class="btn btn-ghost" id="mfaRegenBtn">Regenerate recovery codes</button>
+                        <h4 class="settings-subtitle">Recent approvals</h4>
+                        <table class="user-table" id="mfaAuditTable">
+                            <thead>
+                                <tr>
+                                    <th>When</th>
+                                    <th>Device</th>
+                                    <th>Outcome</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                        <p class="table-empty hidden" id="mfaAuditEmpty">Nothing yet.</p>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Unlink confirmation, three deliberate presses -->
+    <div class="modal-backdrop hidden" id="unlinkModal">
+        <div class="modal modal-sm glass-card">
+            <div class="modal-header">
+                <h2 id="unlinkTitle">Remove the Telegram link?</h2>
+                <button class="btn-icon modal-close" data-modal="unlinkModal" aria-label="Close"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>
+
+            <div id="unlinkStep1">
+                <p style="margin:0 0 1rem">
+                    The chat will stop being able to answer as this account, and the second
+                    factor will stop working. Relinking means making a fresh code from this
+                    tab.
+                </p>
+                <div style="display:flex;gap:.75rem;justify-content:flex-end">
+                    <button class="btn btn-ghost modal-close" data-modal="unlinkModal">Cancel</button>
+                    <button class="btn btn-danger" id="unlinkContinueBtn">Continue</button>
+                </div>
+            </div>
+
+            <div id="unlinkStep2" class="hidden">
+                <p style="margin:0 0 1rem">
+                    A six digit code has been sent to the linked chat. Type it here to
+                    confirm.
+                </p>
+                <input type="text" id="unlinkCode" inputmode="numeric" autocomplete="one-time-code"
+                    maxlength="6" placeholder="123456" class="code-input" />
+                <p class="settings-hint" id="unlinkCountdown"></p>
+                <div class="auth-error hidden" id="unlinkError"></div>
+                <div style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:1rem">
+                    <button class="btn btn-ghost modal-close" data-modal="unlinkModal">Cancel</button>
+                    <button class="btn btn-ghost" id="unlinkResendBtn" disabled>Send a new code</button>
+                    <button class="btn btn-danger" id="unlinkConfirmBtn">Unlink</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -420,7 +592,6 @@
         </div>
     </div>
 
-    <script src="/lib/uwu-request-signing.js"></script>
     <script src="/script.js"></script>
 
     <script type="module">

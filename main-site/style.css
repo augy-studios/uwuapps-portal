@@ -1471,3 +1471,116 @@ body.modal-open { overflow: hidden; }
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================
+   Settings tab, Telegram linking and the second factor
+   ========================================================= */
+
+.settings-section {
+  padding: 1rem 0 1.35rem;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.settings-section:last-child {
+  border-bottom: none;
+}
+
+.settings-title {
+  margin: 0 0 .35rem;
+  font-size: .98rem;
+  font-weight: 700;
+}
+
+.settings-subtitle {
+  margin: 1.15rem 0 .5rem;
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.settings-hint {
+  margin: 0 0 .85rem;
+  font-size: .82rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.settings-actions {
+  display: flex;
+  gap: .6rem;
+  flex-wrap: wrap;
+  margin-top: .75rem;
+}
+
+.settings-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: .3rem 1rem;
+  margin: 0 0 1rem;
+  font-size: .85rem;
+}
+
+.settings-facts dt {
+  color: var(--muted);
+}
+
+.settings-facts dd {
+  margin: 0;
+  word-break: break-word;
+}
+
+.settings-code {
+  margin: 0 0 .5rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.6rem;
+  letter-spacing: .28em;
+  user-select: all;
+}
+
+.settings-codes {
+  margin: 0 0 .5rem;
+  padding: .85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--surface-border);
+  background: var(--surface-strong);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .9rem;
+  line-height: 1.9;
+  letter-spacing: .08em;
+  user-select: all;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+/* The held login, and the unlink confirmation */
+
+.mfa-step {
+  margin-top: .5rem;
+}
+
+.match-number {
+  margin: 0 0 .5rem;
+  font-size: 2.6rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.code-input {
+  width: 100%;
+  padding: .7rem .9rem;
+  border-radius: 10px;
+  border: 1px solid var(--surface-border);
+  background: var(--surface-strong);
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.15rem;
+  letter-spacing: .35em;
+  text-align: center;
+  outline: none;
+}
+
+.code-input:focus {
+  border-color: var(--brand);
+}

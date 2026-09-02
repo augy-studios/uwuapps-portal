@@ -21,14 +21,13 @@ The public site and its API.
 - Installable from the Play Store as `org.uwuapps.portal`
 - Themeable, with a light and dark mode plus several colour themes
 - Serverless API under [main-site/api/](main-site/api/) covering [authentication](main-site/api/auth.js), the [app catalogue](main-site/api/apps.js), [user administration](main-site/api/users.js), and [uploads](main-site/api/upload.js)
-- Every API call is HMAC signed, see [main-site/lib/uwu-request-signing-server.js](main-site/lib/uwu-request-signing-server.js)
 - Deployed on Vercel, configured in [main-site/vercel.json](main-site/vercel.json)
 
 Start with [main-site/README.md](main-site/README.md) and [main-site/release-notes.md](main-site/release-notes.md).
 
 ### [telegram-bot/](telegram-bot/)
 
-A Telegram bot that lets people browse the directory, link their portal account, and hear about new apps without opening a browser. A linked account can also use Telegram as a second factor when signing in to the portal, either by approving a prompt or by pasting in a one time code. It runs on a Debian VPS inside tmux, stores everything in SQLite, and talks to the portal over the same signed API the website uses.
+A Telegram bot that lets people browse the directory, link their portal account, and hear about new apps without opening a browser. A linked account can also use Telegram as a second factor when signing in to the portal, either by approving a prompt or by pasting in a one time code. It runs on a Debian VPS inside tmux, stores everything in SQLite, and talks to the portal over the same API the website uses.
 
 **Status: specified, not yet built.** The build brief is not tracked in git, so ask a maintainer for `telegram-bot-spec.md` if you plan to work on it. Once the directory lands it will carry its own `README.md` and `SETUP.md`.
 
