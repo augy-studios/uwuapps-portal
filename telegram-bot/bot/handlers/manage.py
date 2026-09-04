@@ -832,7 +832,7 @@ async def _save(event: Any, ctx: Ctx, draft: Draft, edit: Any = None) -> None:
 
     await ctx.db.delete_app_draft(telegram_id)
     # The directory list is cached for a quarter of an hour, and somebody who
-    # just saved an app should see it in /apps straight away.
+    # just saved an app should see it in /browse straight away.
     await ctx.cache.invalidate("apps:list")
 
     state = "published" if app.get("published") else "saved as a draft"

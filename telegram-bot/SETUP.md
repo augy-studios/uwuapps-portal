@@ -63,8 +63,7 @@ No line names the bot, which is deliberate.
 start - See what this is and how to begin
 link - Link this Telegram account to your portal account
 code - Get a one time code for signing in
-apps - Browse the published apps
-new - See the most recently published apps
+browse - Browse the published apps
 about - Read more about UwU Suite
 whoami - See which portal account is linked here
 notify - Turn new app announcements on or off
@@ -198,7 +197,7 @@ Healthy startup looks like this:
 
 The migration lines appear on the first run only. Detach with `Ctrl-b` then `d`.
 
-Now message the bot `/start`, then `/apps`. Both should answer without any
+Now message the bot `/start`, then `/browse`. Both should answer without any
 portal side work being finished, because reading the directory needs no
 credentials at all.
 

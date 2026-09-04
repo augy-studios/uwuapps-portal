@@ -24,7 +24,7 @@ from bot.handlers import start as start_handler
 from bot.services import signing
 from bot.services.portal import IssuedCode, PortalError, PortalUnavailable
 
-from .conftest import FakeEvent
+from .conftest import FakeCallbackEvent, FakeEvent
 
 APPS = [
     {
@@ -66,7 +66,7 @@ APPS = [
 async def test_start_carries_the_whole_command_list(ctx):
     await start_handler.handle_start(FakeEvent("/start"), "", ctx)
     body = ctx.client.sent[-1].text
-    for name in ("/link", "/code", "/apps"):
+    for name in ("/link", "/code", "/browse"):
         assert name in body
 
 
@@ -201,6 +201,81 @@ async def test_ordinary_text_during_a_link_flow_falls_through_to_search(ctx):
 
     assert handled is False
     assert not link_handler.is_awaiting(42)
+
+
+# --- /browse and the sort button -------------------------------------------
+
+
+def _titles(selected) -> list[str]:
+    return [a["title"] for a in selected]
+
+
+def test_each_order_arranges_the_directory_its_own_way():
+    order = lambda sort: _titles(apps_handler.select(APPS, "all", "", sort))  # noqa: E731
+
+    assert order(apps_handler.SORT_DEFAULT) == ["Wordle", "Invoice Maker", "Tip Splitter"]
+    assert order(apps_handler.SORT_AZ) == ["Invoice Maker", "Tip Splitter", "Wordle"]
+    assert order(apps_handler.SORT_ZA) == ["Wordle", "Tip Splitter", "Invoice Maker"]
+    assert order(apps_handler.SORT_NEWEST) == ["Invoice Maker", "Wordle", "Tip Splitter"]
+    assert order(apps_handler.SORT_OLDEST) == ["Tip Splitter", "Wordle", "Invoice Maker"]
+
+
+def test_an_app_with_no_date_sorts_last_whichever_way_round_the_dates_go():
+    undated = APPS + [{"id": "a4", "title": "Aardvark", "published": True}]
+
+    for sort in (apps_handler.SORT_NEWEST, apps_handler.SORT_OLDEST):
+        assert _titles(apps_handler.select(undated, "all", "", sort))[-1] == "Aardvark"
+
+
+def test_an_unknown_order_falls_back_to_the_default_one():
+    assert apps_handler.clean_sort("sideways") == apps_handler.SORT_DEFAULT
+    assert _titles(apps_handler.select(APPS, "all", "", "sideways")) == _titles(
+        apps_handler.select(APPS, "all", "", apps_handler.SORT_DEFAULT)
+    )
+
+
+def test_the_cycle_wraps_round_to_the_start():
+    seen = [apps_handler.SORT_DEFAULT]
+    for _ in range(len(apps_handler.SORT_CYCLE)):
+        seen.append(apps_handler.next_sort(seen[-1]))
+    assert seen == apps_handler.SORT_CYCLE + [apps_handler.SORT_DEFAULT]
+
+
+async def test_browse_opens_on_the_default_order_and_offers_the_sort_button(ctx):
+    ctx.portal.apps = APPS
+    await apps_handler.handle_browse(FakeEvent("/browse"), "", ctx)
+
+    sent = ctx.client.sent[-1]
+    assert "Sort: Default" in _labels(sent)
+    assert "in the default order" in sent.text
+
+
+async def test_the_sort_button_moves_one_step_and_says_so(ctx):
+    ctx.portal.apps = APPS
+    data = await ctx.callbacks.register(
+        "apps.sort", {"mode": "all", "q": "", "s": apps_handler.SORT_DEFAULT}, owner_id=42
+    )
+
+    event = FakeCallbackEvent(data)
+    await ctx.callbacks.dispatch(event, ctx)
+
+    assert event.answers[-1][0] == "Sorted: A to Z"
+    sent = ctx.client.sent[-1]
+    assert "Sort: A to Z" in _labels(sent)
+    assert sent.text.index("Invoice Maker") < sent.text.index("Wordle")
+
+
+async def test_a_button_from_before_browse_existed_still_opens_the_newest_first(ctx):
+    ctx.portal.apps = APPS
+    data = await ctx.callbacks.register(
+        "apps.page", {"mode": "new", "q": "", "page": 0}, owner_id=42
+    )
+
+    await ctx.callbacks.dispatch(FakeCallbackEvent(data), ctx)
+
+    sent = ctx.client.sent[-1]
+    assert "newest first" in sent.text
+    assert "Sort: Newest" in _labels(sent)
 
 
 # --- criterion 7, the portal is down ---------------------------------------

@@ -16,8 +16,7 @@ VPS, and the portal side changes that linking depends on.
 | `/start` | The whole reference surface. What UwU Suite is, every command, and the buttons. There is no `/help`, this is it |
 | `/link` | Starts or finishes linking this chat to your portal account. With a code, redeems it. Without one, explains where a code comes from |
 | `/code` | A six digit one time code for signing in, with a copy button. Mostly a fallback, since a sign in already pushes one |
-| `/apps` | The published directory, five per page, with Previous and Next |
-| `/new` | The most recently published apps |
+| `/browse` | The published directory, five per page, with Previous and Next, and a sort button under the pager |
 | `/about` | Background, plus links to the site, the Play listing and the code of conduct |
 | `/whoami` | Which portal account is linked here, the role, and when the link was made |
 | `/notify` | Turn new app announcements on or off |
@@ -29,6 +28,13 @@ VPS, and the portal side changes that linking depends on.
 | `/edit` | Editors and admins only. The same form, over an app that is already listed |
 | `/publish` | Editors and admins only. Publishes an app, or takes one back to a draft |
 | `/delete` | Admins only. Removes an app, after a confirmation |
+
+**The sort button sits under the pager**, on browse pages and on search results
+alike. Pressing it moves one step round **Default**, **A to Z**, **Z to A**,
+**Newest**, **Oldest** and back to the start, and the label always names the
+order you are looking at rather than the one you are about to get. The order is
+carried by every button on the page, so opening an app and coming back keeps it.
+There is no `/new`, because newest first is now one press away.
 
 **Anything that is not a command is a search.** Type `wordle` in a private chat
 and it finds the app. One match opens the card directly, several show a page of
@@ -47,8 +53,7 @@ Commands
 /start - See what this is and how to begin
 /link - Link this Telegram account to your portal account
 /code - Get a one time code for signing in
-/apps - Browse the published apps
-/new - See the most recently published apps
+/browse - Browse the published apps
 /about - Read more about UwU Suite
 /whoami - See which portal account is linked here
 /notify - Turn new app announcements on or off
