@@ -330,12 +330,13 @@ async def test_code_needs_a_link_first(ctx):
     assert ctx.portal.calls == []
 
 
-async def test_code_shows_the_digits_in_a_tap_to_copy_block(ctx):
+async def test_code_shows_the_digits_in_a_tap_to_copy_span(ctx):
     await _link(ctx)
     await mfa_handler.handle_code(FakeEvent("/code"), "", ctx)
 
     sent = ctx.client.sent[-1]
-    assert "<code>123456</code>" in sent.text
+    assert "`123456`" in sent.markdown
+    assert "123456" in sent.text
     assert "will ever ask you for this code" in sent.text
     assert "5 minutes" in sent.text
 
@@ -349,9 +350,9 @@ async def test_code_offers_a_copy_button(ctx):
         assert "Copy the code" in labels
     else:
         # Criterion 14: without support the message still works, because the
-        # <code> block is tap to copy on every client.
+        # code span is tap to copy on every client.
         assert labels == []
-        assert "<code>123456</code>" in ctx.client.sent[-1].text
+        assert "`123456`" in ctx.client.sent[-1].markdown
 
 
 async def test_a_message_without_copy_support_still_carries_the_digits(ctx, monkeypatch):
@@ -360,7 +361,8 @@ async def test_a_message_without_copy_support_still_carries_the_digits(ctx, monk
     await mfa_handler.handle_code(FakeEvent("/code"), "", ctx)
 
     sent = ctx.client.sent[-1]
-    assert "<code>123456</code>" in sent.text
+    assert "`123456`" in sent.markdown
+    assert "123456" in sent.text
     assert sent.buttons is None
 
 

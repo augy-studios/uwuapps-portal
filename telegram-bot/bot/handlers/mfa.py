@@ -7,7 +7,7 @@ sends, a resolution call, and /code as the pull path when a pushed message did
 not arrive or expired.
 
 Handling rule for /code: the reply carries a live credential in two places, the
-<code> block and the copy button markup. The whole message is exempt from
+code span and the copy button markup. The whole message is exempt from
 logging, never reaches logs/bot.log, and is deleted by a scheduled job when the
 code expires. Messages the portal pushed are the portal's to clear, because the
 bot holds no ids for them.
@@ -44,6 +44,25 @@ NOT_ENABLED = (
 NO_LONGER_VALID = "That request is no longer valid. Start the sign in again."
 
 
+def build_code(
+    code: str, remaining: int, superseded: bool
+) -> tuple[dict[str, str], list[list[rich.Btn]]]:
+    """The code message. The digits sit in a code span, which is tap to copy
+    on every client, and in the copy button for the ones that offer it."""
+    paragraphs = [
+        f"Your code is {rich.code(code)}",
+        f"It works for the next {rich.humanize_seconds(remaining)}. "
+        "Type it into the page that is waiting for it.",
+    ]
+    if superseded:
+        paragraphs.append(
+            "This is now the current code. Any earlier one no longer works."
+        )
+    paragraphs.append(NEVER_ASKED)
+    view = rich.message("\n\n".join(paragraphs), title="One time code")
+    return view, [[rich.Btn.copy("Copy the code", code)]]
+
+
 @command("code", "Get a one time code for signing in", weight=20)
 async def handle_code(event: Any, args: str, ctx: Ctx) -> None:
     telegram_id = event.sender_id
@@ -51,7 +70,7 @@ async def handle_code(event: Any, args: str, ctx: Ctx) -> None:
     link = await ctx.db.get_link(telegram_id)
     if link is None:
         await rich.send_rich_message(
-            ctx.client, event.chat_id, NOT_LINKED, title="Not linked yet",
+            ctx.client, event.chat_id, rich.message(NOT_LINKED, title="Not linked yet"),
             buttons=[[portal_button(ctx)]],
             reply_to=reply_id(event), owner_id=telegram_id,
         )
@@ -66,9 +85,9 @@ async def handle_code(event: Any, args: str, ctx: Ctx) -> None:
         )
         return
     except PortalError as exc:
-        message = NOT_ENABLED if exc.code == "mfa_disabled" else rich.esc(exc.message)
+        reason = NOT_ENABLED if exc.code == "mfa_disabled" else rich.escape_md(exc.message)
         await rich.send_rich_message(
-            ctx.client, event.chat_id, message, title="No code issued",
+            ctx.client, event.chat_id, rich.message(reason, title="No code issued"),
             buttons=[[portal_button(ctx)]],
             reply_to=reply_id(event), owner_id=telegram_id,
         )
@@ -79,23 +98,12 @@ async def handle_code(event: Any, args: str, ctx: Ctx) -> None:
         expiry = parse_iso(issued.expires_at)
         remaining = int((expiry - utcnow()).total_seconds()) if expiry else 300
 
-    lines = [
-        f"Your code is {rich.code_block(issued.code)}",
-        f"It works for the next {rich.humanize_seconds(remaining)}. "
-        "Type it into the page that is waiting for it.",
-    ]
-    if issued.superseded_pushed_code:
-        lines.append(
-            "This is now the current code. Any earlier one no longer works."
-        )
-    lines.append(NEVER_ASKED)
-
+    view, buttons = build_code(issued.code, remaining, issued.superseded_pushed_code)
     sent = await rich.send_rich_message(
         ctx.client,
         event.chat_id,
-        "\n\n".join(lines),
-        title="One time code",
-        buttons=[[rich.Btn.copy("Copy the code", issued.code)]],
+        view,
+        buttons=buttons,
         reply_to=reply_id(event),
         owner_id=telegram_id,
         sensitive=True,
@@ -149,7 +157,7 @@ async def handle_callback(event: Any, ctx: Ctx) -> bool:
         await event.answer(rich.PORTAL_DOWN, alert=True)
         return True
     except PortalError as exc:
-        await event.answer(rich.esc(exc.message) or NO_LONGER_VALID, alert=True)
+        await event.answer(exc.message or NO_LONGER_VALID, alert=True)
         await _strip_buttons(event, ctx, NO_LONGER_VALID)
         return True
 

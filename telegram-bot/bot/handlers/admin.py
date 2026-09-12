@@ -72,34 +72,35 @@ async def handle_stats(event: Any, args: str, ctx: Ctx) -> None:
         (since,),
     )
 
-    counts = "\n".join(
-        f"{rich.esc(row['command'])} {row['uses']}" for row in rows
-    ) or "Nothing yet."
-
-    body = "\n\n".join(
-        [
-            "\n".join(
-                [
-                    f"Known users: {users}, of which {blocked} have blocked the chat",
-                    f"Linked accounts: {links}",
-                    f"Announcement subscribers: {subscribers}",
-                ]
-            ),
-            "\n".join(
-                [
-                    f"<b>Last {WINDOW_DAYS} days</b>",
-                    f"Active users: {active}",
-                    f"Failed replies: {failures}",
-                    f"Codes issued: {codes}",
-                    f"Approvals: {approvals}, refusals: {denials}",
-                ]
-            ),
-            "<b>Commands</b>\n" + counts,
-            f"Jobs marked failed: {stuck}",
-        ]
-    )
+    sections = [
+        rich.table(
+            ["Count"],
+            [
+                ("Known users", users),
+                ("Of which blocked the chat", blocked),
+                ("Linked accounts", links),
+                ("Announcement subscribers", subscribers),
+                ("Jobs marked failed", stuck),
+            ],
+        ),
+        f"## Last {WINDOW_DAYS} days",
+        rich.table(
+            ["Count"],
+            [
+                ("Active users", active),
+                ("Failed replies", failures),
+                ("Codes issued", codes),
+                ("Approvals", approvals),
+                ("Refusals", denials),
+            ],
+        ),
+        "## Commands",
+        rich.table(["Uses"], [(row["command"], row["uses"]) for row in rows], corner="Command")
+        if rows
+        else "Nothing yet.",
+    ]
 
     await rich.send_rich_message(
-        ctx.client, event.chat_id, body, title="Stats",
+        ctx.client, event.chat_id, rich.message("\n\n".join(sections), title="Stats"),
         reply_to=reply_id(event), owner_id=event.sender_id,
     )

@@ -112,8 +112,7 @@ async def handle_unlink(event: Any, args: str, ctx: Ctx) -> None:
     await rich.send_rich_message(
         ctx.client,
         event.chat_id,
-        UNLINK_REFUSAL,
-        title="Unlinking happens on the portal",
+        rich.message(UNLINK_REFUSAL, title="Unlinking happens on the portal"),
         buttons=[[portal_button(ctx)]],
         reply_to=reply_id(event),
         owner_id=event.sender_id,
@@ -128,12 +127,12 @@ async def _explain(event: Any, ctx: Ctx) -> None:
     await rich.send_rich_message(
         ctx.client,
         event.chat_id,
-        (
+        rich.message(
             f"{WHERE_TO_GET_A_CODE}\n\n"
             "Press the link it opens, or send the code here on its own, or send "
-            "it as <code>/link YOURCODE</code>. A code lasts ten minutes."
+            f"it as {rich.code('/link YOURCODE')}. A code lasts ten minutes.",
+            title="Linking your account",
         ),
-        title="Linking your account",
         buttons=[[portal_button(ctx)]],
         reply_to=reply_id(event),
         owner_id=event.sender_id,
@@ -145,12 +144,12 @@ async def _already_linked(event: Any, ctx: Ctx, row: Any) -> None:
     await rich.send_rich_message(
         ctx.client,
         event.chat_id,
-        (
-            f"This chat is already linked to {rich.esc(name)}.\n\n"
+        rich.message(
+            f"This chat is already linked to {rich.bold(name)}.\n\n"
             "To attach a different account, or to remove this one, use the "
-            "Settings tab in the Admin Panel on the portal."
+            "Settings tab in the Admin Panel on the portal.",
+            title="Already linked",
         ),
-        title="Already linked",
         buttons=[[portal_button(ctx)]],
         reply_to=reply_id(event),
         owner_id=event.sender_id,
@@ -161,12 +160,12 @@ async def _locked_out(event: Any, ctx: Ctx) -> None:
     await rich.send_rich_message(
         ctx.client,
         event.chat_id,
-        (
+        rich.message(
             "Too many codes have failed here recently, so linking is paused for "
             "an hour. Nothing is wrong with your account. Mint a fresh code from "
-            "the Settings tab when the hour is up."
+            "the Settings tab when the hour is up.",
+            title="Linking is paused",
         ),
-        title="Linking is paused",
         buttons=[[portal_button(ctx)]],
         reply_to=reply_id(event),
         owner_id=event.sender_id,
@@ -189,11 +188,11 @@ async def redeem(event: Any, raw_code: str, ctx: Ctx, *, greeting: bool = False)
         await rich.send_rich_message(
             ctx.client,
             event.chat_id,
-            (
+            rich.message(
                 "That does not look like a linking code. A code is eight "
-                "characters, letters and digits.\n\n" + WHERE_TO_GET_A_CODE
+                "characters, letters and digits.\n\n" + WHERE_TO_GET_A_CODE,
+                title="Code not recognised",
             ),
-            title="Code not recognised",
             buttons=[[portal_button(ctx)]],
             reply_to=reply_id(event),
             owner_id=telegram_id,
@@ -220,8 +219,10 @@ async def redeem(event: Any, raw_code: str, ctx: Ctx, *, greeting: bool = False)
         await rich.send_rich_message(
             ctx.client,
             event.chat_id,
-            f"{rich.esc(exc.message)}\n\n{WHERE_TO_GET_A_CODE}{note}",
-            title="That code did not work",
+            rich.message(
+                f"{rich.escape_md(exc.message)}\n\n{WHERE_TO_GET_A_CODE}{note}",
+                title="That code did not work",
+            ),
             buttons=[[portal_button(ctx)]],
             reply_to=reply_id(event),
             owner_id=telegram_id,
@@ -254,7 +255,7 @@ async def redeem(event: Any, raw_code: str, ctx: Ctx, *, greeting: bool = False)
     name = account.display_name or account.username or "your portal account"
     opening = "Welcome. " if greeting else ""
     body = (
-        f"{opening}This chat is now linked to {rich.esc(name)}.\n\n"
+        f"{opening}This chat is now linked to {rich.bold(name)}.\n\n"
         "The link is removed from the Settings tab on the portal, not from this "
         "chat. You can also turn on two factor authentication there, which uses "
         "this chat as the second step when you sign in."
@@ -262,8 +263,7 @@ async def redeem(event: Any, raw_code: str, ctx: Ctx, *, greeting: bool = False)
     await rich.send_rich_message(
         ctx.client,
         event.chat_id,
-        body,
-        title="Linked",
+        rich.message(body, title="Linked"),
         buttons=[[portal_button(ctx)]],
         reply_to=reply_id(event),
         owner_id=telegram_id,
@@ -285,12 +285,12 @@ async def _cb_link_start(event: Any, payload: dict[str, Any], ctx: Ctx) -> None:
     await rich.send_rich_message(
         ctx.client,
         event.chat_id,
-        (
+        rich.message(
             f"{WHERE_TO_GET_A_CODE}\n\n"
-            "Then send the code here on its own, or as <code>/link YOURCODE</code>. "
-            "A code lasts ten minutes."
+            f"Then send the code here on its own, or as {rich.code('/link YOURCODE')}. "
+            "A code lasts ten minutes.",
+            title="Linking your account",
         ),
-        title="Linking your account",
         buttons=[[portal_button(ctx)]],
         owner_id=telegram_id,
     )

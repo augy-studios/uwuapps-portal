@@ -43,8 +43,7 @@ async def handle_about(event: Any, args: str, ctx: Ctx) -> None:
     await rich.send_rich_message(
         ctx.client,
         event.chat_id,
-        ABOUT,
-        title="About UwU Suite",
+        rich.message(ABOUT, title="About UwU Suite"),
         buttons=[
             [web_app_button(ctx), donate_button(ctx)],
             [rich.Btn.link("On Google Play", PLAY_URL)],
@@ -61,26 +60,19 @@ async def handle_about(event: Any, args: str, ctx: Ctx) -> None:
 # --- account ---------------------------------------------------------------
 
 
-async def show_account(event: Any, ctx: Ctx, edit: Any = None) -> None:
-    telegram_id = event.sender_id
+NOT_LINKED = (
+    "This chat is not linked to a portal account yet.\n\n"
+    "Run /link and it walks you through it."
+)
+
+
+async def build_account(ctx: Ctx, telegram_id: int) -> tuple[dict[str, str], list[list[rich.Btn]]]:
+    """Who this chat is linked to, refreshed from the portal when it answers."""
+    buttons = [[portal_button(ctx)]]
     row = await ctx.db.get_link(telegram_id)
     if row is None:
-        await rich.send_rich_message(
-            ctx.client,
-            event.chat_id,
-            (
-                "This chat is not linked to a portal account yet.\n\n"
-                "Run /link and it walks you through it."
-            ),
-            title="Not linked yet",
-            buttons=[[portal_button(ctx)]],
-            reply_to=reply_id(event),
-            owner_id=telegram_id,
-            edit=edit,
-        )
-        return
+        return rich.message(NOT_LINKED, title="Not linked yet"), buttons
 
-    # Refresh from the portal when it answers, otherwise show the mirror row.
     mfa_line = ""
     roles = []
     try:
@@ -118,28 +110,35 @@ async def show_account(event: Any, ctx: Ctx, edit: Any = None) -> None:
     name = row["display_name"] or row["portal_username"] or "your portal account"
     linked_at = str(row["linked_at"] or "")[:10]
 
-    lines = [f"Linked to {rich.esc(name)}."]
+    details: list[str] = []
     if row["portal_username"]:
-        lines.append(f"Username {rich.code_block(row['portal_username'])}")
+        details.append(f"- Username {rich.code(row['portal_username'])}")
     if roles:
-        lines.append(f"Role: {rich.esc(', '.join(roles))}")
+        details.append(f"- Role: {rich.escape_md(', '.join(roles))}")
     if linked_at:
-        lines.append(f"Linked on {rich.esc(linked_at)}")
+        details.append(f"- Linked on {rich.escape_md(linked_at)}")
     if mfa_line:
-        lines.append(mfa_line)
-    if account is None:
-        lines.append(rich.STALE_DATA)
+        details.append(f"- {mfa_line}")
 
-    lines.append(
+    paragraphs = [f"Linked to {rich.bold(name)}."]
+    if details:
+        paragraphs.append("\n".join(details))
+    if account is None:
+        paragraphs.append(rich.STALE_DATA)
+    paragraphs.append(
         "The link is managed from the Settings tab in the Admin Panel on the portal."
     )
+    return rich.message("\n\n".join(paragraphs), title="Your account"), buttons
 
+
+async def show_account(event: Any, ctx: Ctx, edit: Any = None) -> None:
+    telegram_id = event.sender_id
+    view, buttons = await build_account(ctx, telegram_id)
     await rich.send_rich_message(
         ctx.client,
         event.chat_id,
-        "\n".join(lines),
-        title="Your account",
-        buttons=[[portal_button(ctx)]],
+        view,
+        buttons=buttons,
         reply_to=reply_id(event),
         owner_id=telegram_id,
         edit=edit,
@@ -173,8 +172,7 @@ async def _notify_state(event: Any, ctx: Ctx, edit: Any = None) -> None:
     await rich.send_rich_message(
         ctx.client,
         event.chat_id,
-        body,
-        title="Announcements",
+        rich.message(body, title="Announcements"),
         buttons=[
             [
                 rich.Btn.callback(
@@ -214,8 +212,7 @@ async def _cb_notify(event: Any, payload: dict[str, Any], ctx: Ctx) -> None:
 # --- status ----------------------------------------------------------------
 
 
-@command("status", "Check that everything is running", weight=80)
-async def handle_status(event: Any, args: str, ctx: Ctx) -> None:
+async def build_status(ctx: Ctx) -> dict[str, str]:
     started = parse_iso(ctx.started_at)
     uptime = (
         rich.humanize_seconds((utcnow() - started).total_seconds())
@@ -232,15 +229,21 @@ async def handle_status(event: Any, args: str, ctx: Ctx) -> None:
     last_call = ctx.portal.last_success_at or "not yet this run"
     pending = await ctx.scheduler.pending_count()
 
-    body = "\n".join(
+    body = rich.table(
+        ["Value"],
         [
-            f"Running for {rich.esc(uptime)}",
-            f"Local database {rich.esc(size)}",
-            f"Last successful portal call: {rich.esc(last_call)}",
-            f"Jobs waiting: {pending}",
-        ]
+            ("Running for", uptime),
+            ("Local database", size),
+            ("Last successful portal call", last_call),
+            ("Jobs waiting", pending),
+        ],
     )
+    return rich.message(body, title="Status")
+
+
+@command("status", "Check that everything is running", weight=80)
+async def handle_status(event: Any, args: str, ctx: Ctx) -> None:
     await rich.send_rich_message(
-        ctx.client, event.chat_id, body, title="Status",
+        ctx.client, event.chat_id, await build_status(ctx),
         reply_to=reply_id(event), owner_id=event.sender_id,
     )

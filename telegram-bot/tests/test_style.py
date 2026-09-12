@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 from bot import rich
-from bot.handlers import all_commands, botfather_block, command_list_html
+from bot.handlers import all_commands, botfather_block, command_list
 
 ROOT = Path(__file__).resolve().parent.parent
 BOT_PACKAGE = ROOT / "bot"
@@ -94,10 +94,11 @@ def test_sanitize_strips_an_em_dash_that_slips_through():
     assert dash not in rich.sanitize(f"a {dash} b {dash} c")
 
 
-def test_compose_sanitizes_the_title_and_the_footer():
+def test_message_sanitizes_both_halves_including_the_title_and_the_footer():
     dash = "—"
-    chunks = rich.compose("body", title=f"A {dash} B", footer=f"C {dash} D")
-    assert dash not in chunks[0]
+    view = rich.message("body", title=f"A {dash} B", footer=f"C {dash} D")
+    assert dash not in view["markdown"]
+    assert dash not in view["fallback"]
 
 
 # --- criterion 4 -----------------------------------------------------------
@@ -114,7 +115,10 @@ def test_no_command_description_names_the_bot():
 
 def test_no_reply_names_the_bot():
     """Every prose string in the user facing modules, docstrings excluded."""
-    surface = list((BOT_PACKAGE / "handlers").glob("*.py")) + [BOT_PACKAGE / "rich.py"]
+    surface = list((BOT_PACKAGE / "handlers").glob("*.py")) + [
+        BOT_PACKAGE / "rich.py",
+        BOT_PACKAGE / "reply.py",
+    ]
     offenders = []
     for path in surface:
         for text in _prose_strings(path):
@@ -124,7 +128,7 @@ def test_no_reply_names_the_bot():
 
 
 def test_the_generated_command_list_names_no_bot():
-    assert not NAMES_THE_BOT.search(command_list_html(include_admin=True))
+    assert not NAMES_THE_BOT.search(command_list(include_admin=True))
     assert not NAMES_THE_BOT.search(botfather_block())
 
 
@@ -143,14 +147,14 @@ def test_the_required_commands_are_registered():
 def test_unlink_is_hidden_from_both_lists():
     """Advertising a command whose only answer is a refusal is worse than silence."""
     assert "unlink" not in botfather_block()
-    assert "/unlink" not in command_list_html()
+    assert "/unlink" not in command_list()
 
 
 def test_admin_commands_stay_out_of_the_public_list():
     """Visible to an admin inside /start, absent from the list everyone sees."""
     assert "stats" not in botfather_block()
-    assert "/stats" not in command_list_html()
-    assert "/stats" in command_list_html(include_admin=True)
+    assert "/stats" not in command_list()
+    assert "/stats" in command_list(include_admin=True)
 
 
 def test_botfather_block_shape():
@@ -162,7 +166,8 @@ def test_botfather_block_shape():
 
 
 def test_the_start_list_and_the_botfather_block_agree():
-    start_names = re.findall(r"^/(\w+)", command_list_html(), re.MULTILINE)
+    """Read off the plain half, which is what the markdown list boils down to."""
+    start_names = re.findall(r"^- /(\w+)", rich.plain(command_list()), re.MULTILINE)
     botfather_names = [line.split(" - ")[0] for line in botfather_block().splitlines()]
     assert start_names == botfather_names
 

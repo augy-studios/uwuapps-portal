@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from .. import rich
+from .. import reply, rich
 from ..context import Ctx
 
 log = logging.getLogger("uwu.jobs")
@@ -37,19 +37,32 @@ async def expire_code_message(payload: dict[str, Any], ctx: Ctx) -> None:
 async def resend_message(payload: dict[str, Any], ctx: Ctx) -> None:
     """Deliver a send that a long flood wait pushed out of the moment.
 
-    Only ever holds a message that carried no credential, see rich.py.
+    Only ever holds a message that carried no credential, see rich.py. A rich
+    message is queued as both halves and goes out rich; a plain notice is
+    queued as `text`.
     """
     chat_id = payload.get("chat_id")
-    text = payload.get("text")
-    if not chat_id or not text:
+    if not chat_id:
         return
     buttons = rich.deserialize_buttons(payload.get("buttons") or [])
+    link_preview = bool(payload.get("link_preview"))
+
+    markdown = payload.get("markdown")
+    if markdown:
+        await reply.send_rich_message(
+            ctx.client,
+            int(chat_id),
+            {"markdown": markdown, "fallback": payload.get("fallback") or markdown},
+            buttons or None,
+            link_preview=link_preview,
+        )
+        return
+
+    text = payload.get("text")
+    if not text:
+        return
     await ctx.client.send_message(
-        int(chat_id),
-        text,
-        parse_mode="html",
-        buttons=buttons or None,
-        link_preview=bool(payload.get("link_preview")),
+        int(chat_id), text, buttons=buttons or None, link_preview=link_preview
     )
 
 

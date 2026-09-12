@@ -25,6 +25,22 @@ async def refresh(payload: dict[str, Any], ctx: Ctx) -> None:
     log.info("Refreshed the app list, %d published apps", len(apps))
 
 
+def build_announcement(app: dict[str, Any]) -> tuple[dict[str, str], list[list[rich.Btn]]]:
+    description = apps_handler.trim(app.get("description") or "")
+    body = rich.lines(
+        rich.bold(app.get("title") or "Untitled"),
+        rich.escape_md(description) if description else "",
+    )
+    buttons: list[list[rich.Btn]] = []
+    url = str(app.get("url") or "")
+    if url.startswith(("http://", "https://")):
+        buttons.append([rich.Btn.link("Open the app", url)])
+    view = rich.message(
+        body, title="New in the directory", footer="Turn these off any time with /notify."
+    )
+    return view, buttons
+
+
 async def announce(payload: dict[str, Any], ctx: Ctx) -> None:
     """Diff against seen_apps and notify the new_apps subscribers."""
     apps, stale = await apps_handler.fetch_apps(ctx)
@@ -60,26 +76,11 @@ async def announce(payload: dict[str, Any], ctx: Ctx) -> None:
         return
 
     for app in fresh[:ANNOUNCE_CAP]:
-        title = rich.esc(app.get("title") or "Untitled")
-        description = apps_handler.trim(app.get("description") or "")
-        body = f"<b>{title}</b>"
-        if description:
-            body += f"\n{rich.esc(description)}"
-
-        buttons: list[list[rich.Btn]] = []
-        url = str(app.get("url") or "")
-        if url.startswith(("http://", "https://")):
-            buttons.append([rich.Btn.link("Open the app", url)])
-
+        view, buttons = build_announcement(app)
         for telegram_id in subscribers:
             try:
                 await rich.send_rich_message(
-                    ctx.client,
-                    telegram_id,
-                    body,
-                    title="New in the directory",
-                    footer="Turn these off any time with /notify.",
-                    buttons=buttons or None,
+                    ctx.client, telegram_id, view, buttons=buttons or None,
                     owner_id=telegram_id,
                 )
             except Exception as exc:

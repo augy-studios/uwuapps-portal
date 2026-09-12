@@ -236,8 +236,7 @@ async def _require_role(event: Any, ctx: Ctx, *, edit: Any = None) -> Role | Non
     await rich.send_rich_message(
         ctx.client,
         event.chat_id,
-        body,
-        title="Not available here",
+        rich.message(body, title="Not available here"),
         buttons=[[portal_button(ctx)]],
         reply_to=reply_id(event),
         owner_id=telegram_id,
@@ -256,27 +255,31 @@ def _shown(draft: Draft, f: Field) -> str:
         return ", ".join(tags) if tags else "none"
     if value in (None, ""):
         return "required" if f.required else "not set"
-    if f.kind == "text" and len(str(value)) > 80:
+    # The form is a summary in a table cell, so a long description or address
+    # is cut short here. The draft still holds the whole value.
+    if len(str(value)) > 80:
         return str(value)[:79].rstrip() + "…"
     return str(value)
 
 
-def render_form(draft: Draft, *, note: str = "") -> tuple[str, str, list[list[rich.Btn]]]:
+def build_form(
+    draft: Draft, *, note: str = ""
+) -> tuple[dict[str, str], list[list[rich.Btn]]]:
+    """The form: one table row per field, then the buttons that change them."""
     owner = draft.telegram_id
-    lines = [
-        f"{rich.esc(f.label)}: {rich.esc(_shown(draft, f))}" for f in FIELDS
-    ]
     state = "Published" if draft.fields.get("published") else "Kept as a draft"
-    lines.append(f"Visibility: {rich.esc(state)}")
-
-    body = "\n".join(lines)
+    body = rich.table(
+        ["Value"],
+        [*((f.label, _shown(draft, f)) for f in FIELDS), ("Visibility", state)],
+        corner="Field",
+    )
     if note:
         body += f"\n\n{note}"
 
     missing = draft.missing()
     if missing:
         names = ", ".join(f.label.lower() for f in missing)
-        body += f"\n\nStill needed before this can be saved: {rich.esc(names)}."
+        body += f"\n\nStill needed before this can be saved: {rich.escape_md(names)}."
 
     rows: list[list[rich.Btn]] = []
     pairs = [FIELDS[i:i + 2] for i in range(0, len(FIELDS), 2)]
@@ -299,17 +302,20 @@ def render_form(draft: Draft, *, note: str = "") -> tuple[str, str, list[list[ri
         ]
     )
 
-    title = "New app" if draft.is_new else f"Editing {draft.fields.get('title') or 'an app'}"
-    return title, body, rows
+    title = (
+        "New app"
+        if draft.is_new
+        else f"Editing {rich.escape_md(draft.fields.get('title') or 'an app')}"
+    )
+    return rich.message(body, title=title), rows
 
 
 async def _paint(
     event: Any,
     ctx: Ctx,
     draft: Draft,
-    body: str,
+    view: dict[str, str],
     *,
-    title: str,
     rows: list[list[rich.Btn]],
     target: Any = None,
 ) -> None:
@@ -323,14 +329,14 @@ async def _paint(
     where = target if target is not None else _form_target(draft)
     try:
         sent = await rich.send_rich_message(
-            ctx.client, event.chat_id, body, title=title, buttons=rows,
+            ctx.client, event.chat_id, view, buttons=rows,
             owner_id=draft.telegram_id, edit=where,
         )
     except Exception:
         # The message was deleted, or is too old to edit. Start a new one.
         log.warning("Could not edit the open form for telegram id %s", draft.telegram_id)
         sent = await rich.send_rich_message(
-            ctx.client, event.chat_id, body, title=title, buttons=rows,
+            ctx.client, event.chat_id, view, buttons=rows,
             owner_id=draft.telegram_id,
         )
 
@@ -343,8 +349,8 @@ async def _paint(
 async def show_form(
     event: Any, ctx: Ctx, draft: Draft, *, note: str = "", edit: Any = None
 ) -> None:
-    title, body, rows = render_form(draft, note=note)
-    await _paint(event, ctx, draft, body, title=title, rows=rows, target=edit)
+    view, rows = build_form(draft, note=note)
+    await _paint(event, ctx, draft, view, rows=rows, target=edit)
 
 
 # --- collecting one field --------------------------------------------------
@@ -358,17 +364,17 @@ async def _ask_for(event: Any, ctx: Ctx, draft: Draft, f: Field, edit: Any = Non
 
     draft.awaiting = f.key
     current = _shown(draft, f)
-    body = f"{rich.esc(f.hint)}\n\nCurrently: {rich.esc(current)}"
+    view = rich.message(
+        f"{rich.escape_md(f.hint)}\n\nCurrently: {rich.escape_md(current)}",
+        title=f"Send the {f.label.lower()}",
+    )
     rows = [[rich.Btn.callback("Back to the form", "manage.form", {}, owner_id=owner)]]
     if not f.required:
         rows[0].insert(
             0, rich.Btn.callback("Leave it empty", "manage.clear", {"f": f.key}, owner_id=owner)
         )
 
-    await _paint(
-        event, ctx, draft, body,
-        title=f"Send the {f.label.lower()}", rows=rows, target=edit,
-    )
+    await _paint(event, ctx, draft, view, rows=rows, target=edit)
 
 
 async def _ask_for_tags(event: Any, ctx: Ctx, draft: Draft, edit: Any = None) -> None:
@@ -392,8 +398,10 @@ async def _ask_for_tags(event: Any, ctx: Ctx, draft: Draft, edit: Any = None) ->
         event,
         ctx,
         draft,
-        "Press a tag to turn it on or off. An app can carry as many as suit it.",
-        title="Tags",
+        rich.message(
+            "Press a tag to turn it on or off. An app can carry as many as suit it.",
+            title="Tags",
+        ),
         rows=rows,
         target=edit,
     )
@@ -454,8 +462,10 @@ async def consume_pending(event: Any, text: str, ctx: Ctx) -> bool:
         await rich.send_rich_message(
             ctx.client,
             event.chat_id,
-            f"{rich.esc(problem)}\n\n{rich.esc(f.hint)}",
-            title=f"That is not a {f.label.lower()} yet",
+            rich.message(
+                f"{rich.escape_md(problem)}\n\n{rich.escape_md(f.hint)}",
+                title=f"That is not a {f.label.lower()} yet",
+            ),
             buttons=[
                 [rich.Btn.callback("Back to the form", "manage.form", {}, owner_id=draft.telegram_id)]
             ],
@@ -466,7 +476,7 @@ async def consume_pending(event: Any, text: str, ctx: Ctx) -> bool:
 
     draft.set(f.key, value)
     draft.awaiting = None
-    await show_form(event, ctx, draft, note=f"Saved the {rich.esc(f.label.lower())}.")
+    await show_form(event, ctx, draft, note=f"Saved the {rich.escape_md(f.label.lower())}.")
     return True
 
 
@@ -486,14 +496,14 @@ async def _show_hub(event: Any, ctx: Ctx, role: Role, edit: Any = None) -> None:
     draft = await load_draft(ctx, owner)
 
     lines = [
-        f"Acting as {rich.esc(role.display_name or role.username or 'your portal account')}, "
-        f"role {rich.esc(role.label)}.",
+        f"Acting as {rich.bold(role.display_name or role.username or 'your portal account')}, "
+        f"role {rich.escape_md(role.label)}.",
         "Editors may change the apps they created. Admins may change any of them, "
         "and are the only ones who can delete.",
     ]
     if draft is not None:
         what = draft.fields.get("title") or "an app with no title yet"
-        lines.append(f"There is an unfinished draft here: {rich.esc(what)}.")
+        lines.append(f"There is an unfinished draft here: {rich.bold(what)}.")
     if role.stale:
         lines.append(rich.STALE_DATA)
 
@@ -524,8 +534,7 @@ async def _show_hub(event: Any, ctx: Ctx, role: Role, edit: Any = None) -> None:
     await rich.send_rich_message(
         ctx.client,
         event.chat_id,
-        "\n\n".join(lines),
-        title="Managing the directory",
+        rich.message("\n\n".join(lines), title="Managing the directory"),
         buttons=rows,
         reply_to=reply_id(event),
         owner_id=owner,
@@ -564,13 +573,13 @@ async def _offer_the_draft(event: Any, ctx: Ctx, draft: Draft, *, instead: str =
     await rich.send_rich_message(
         ctx.client,
         event.chat_id,
-        (
-            f"There is already a draft waiting here, {rich.esc(kind)}: "
-            f"{rich.esc(what)}.\n\n"
+        rich.message(
+            f"There is already a draft waiting here, {rich.escape_md(kind)}: "
+            f"{rich.bold(what)}.\n\n"
             "Carry on with it, or throw it away and start on the other one. Only "
-            "one draft is kept at a time."
+            "one draft is kept at a time.",
+            title="A draft is already open",
         ),
-        title="A draft is already open",
         buttons=[
             [
                 rich.Btn.callback("Carry on", "manage.form", {}, owner_id=draft.telegram_id),
@@ -611,12 +620,12 @@ async def handle_delete(event: Any, args: str, ctx: Ctx) -> None:
         await rich.send_rich_message(
             ctx.client,
             event.chat_id,
-            (
+            rich.message(
                 "Deleting an app is an admin action on the portal, so it is one "
                 "here too. An editor can take an app back to a draft with "
-                "/publish, which hides it from the directory without losing it."
+                "/publish, which hides it from the directory without losing it.",
+                title="Admins only",
             ),
-            title="Admins only",
             buttons=[[portal_button(ctx)]],
             reply_to=reply_id(event),
             owner_id=event.sender_id,
@@ -689,12 +698,12 @@ async def _show_picker(
         await rich.send_rich_message(
             ctx.client,
             event.chat_id,
-            (
+            rich.message(
                 "Nothing here matches that."
                 if query
-                else "There is nothing here you can work on yet."
+                else "There is nothing here you can work on yet.",
+                title="Nothing to show",
             ),
-            title="Nothing to show",
             buttons=[
                 [rich.Btn.callback("Add an app", "manage.new", {}, owner_id=owner)]
             ],
@@ -708,15 +717,12 @@ async def _show_picker(
     page = max(0, min(page, pages - 1))
     window = apps[page * PICK_PAGE_SIZE: page * PICK_PAGE_SIZE + PICK_PAGE_SIZE]
 
-    lines = []
+    listed: list[tuple[int, str, str]] = []
     rows: list[list[rich.Btn]] = []
     for offset, app in enumerate(window, start=1):
         number = page * PICK_PAGE_SIZE + offset
         state = "published" if app.get("published") else "draft"
-        lines.append(
-            f"{number}. <b>{rich.esc(app.get('title') or 'Untitled')}</b> "
-            f"<i>{rich.esc(state)}</i>"
-        )
+        listed.append((number, app.get("title") or "Untitled", state))
         rows.append(
             [
                 rich.Btn.callback(
@@ -737,12 +743,15 @@ async def _show_picker(
     if nav:
         rows.append(nav)
 
+    view = rich.message(
+        rich.table(["App", "State"], listed),
+        title=PICK_TITLES.get(next_step, "Pick an app"),
+        footer=f"Page {page + 1} of {pages}, {len(apps)} app{'s' if len(apps) != 1 else ''}",
+    )
     await rich.send_rich_message(
         ctx.client,
         event.chat_id,
-        "\n".join(lines),
-        title=PICK_TITLES.get(next_step, "Pick an app"),
-        footer=f"Page {page + 1} of {pages}, {len(apps)} app{'s' if len(apps) != 1 else ''}",
+        view,
         buttons=rows,
         reply_to=reply_id(event),
         owner_id=owner,
@@ -786,9 +795,9 @@ async def _portal_refusal(event: Any, ctx: Ctx, exc: PortalError, edit: Any = No
         "not_yours": "That app was added by somebody else, so an admin has to make the change.",
         "not_found": "That app is not in the directory any more.",
     }
-    body = explanations.get(exc.code or "", rich.esc(exc.message))
+    body = explanations.get(exc.code or "", rich.escape_md(exc.message))
     await rich.send_rich_message(
-        ctx.client, event.chat_id, body, title="Not done",
+        ctx.client, event.chat_id, rich.message(body, title="Not done"),
         buttons=[[portal_button(ctx)]],
         reply_to=reply_id(event), owner_id=event.sender_id, edit=edit,
     )
@@ -838,7 +847,7 @@ async def _save(event: Any, ctx: Ctx, draft: Draft, edit: Any = None) -> None:
     state = "published" if app.get("published") else "saved as a draft"
     what = "Added" if draft.is_new else "Updated"
     body = (
-        f"{what} {rich.esc(app.get('title') or 'the app')}, {rich.esc(state)}.\n\n"
+        f"{what} {rich.bold(app.get('title') or 'the app')}, {rich.escape_md(state)}.\n\n"
         + (
             "It is in the directory now."
             if app.get("published")
@@ -860,7 +869,7 @@ async def _save(event: Any, ctx: Ctx, draft: Draft, edit: Any = None) -> None:
     )
 
     await rich.send_rich_message(
-        ctx.client, event.chat_id, body, title="Saved", buttons=rows,
+        ctx.client, event.chat_id, rich.message(body, title="Saved"), buttons=rows,
         owner_id=telegram_id, edit=edit,
     )
 
@@ -959,7 +968,7 @@ async def _cb_clear(event: Any, payload: dict[str, Any], ctx: Ctx) -> None:
     draft.awaiting = None
     await show_form(
         event, ctx, draft,
-        note=f"Left the {rich.esc(f.label.lower())} empty.",
+        note=f"Left the {rich.escape_md(f.label.lower())} empty.",
         edit=await event.get_message(),
     )
 
@@ -1003,8 +1012,7 @@ async def _cb_discard(event: Any, payload: dict[str, Any], ctx: Ctx) -> None:
     await rich.send_rich_message(
         ctx.client,
         event.chat_id,
-        "That draft is gone. Nothing in the directory changed.",
-        title="Discarded",
+        rich.message("That draft is gone. Nothing in the directory changed.", title="Discarded"),
         buttons=[
             [rich.Btn.callback("Add an app", "manage.new", {}, owner_id=event.sender_id)]
         ],
@@ -1067,8 +1075,10 @@ async def _cb_pick(event: Any, payload: dict[str, Any], ctx: Ctx) -> None:
         await rich.send_rich_message(
             ctx.client,
             event.chat_id,
-            "That app is not in the directory any more, or is not yours to change.",
-            title="Not found",
+            rich.message(
+                "That app is not in the directory any more, or is not yours to change.",
+                title="Not found",
+            ),
             owner_id=event.sender_id,
             edit=message,
         )
@@ -1097,7 +1107,7 @@ async def _cb_pick(event: Any, payload: dict[str, Any], ctx: Ctx) -> None:
 async def _confirm_publish(event: Any, ctx: Ctx, app: dict[str, Any], edit: Any = None) -> None:
     owner = event.sender_id
     published = bool(app.get("published"))
-    title = rich.esc(app.get("title") or "that app")
+    title = rich.bold(app.get("title") or "that app")
     body = (
         f"{title} is published and visible in the directory."
         if published
@@ -1107,8 +1117,7 @@ async def _confirm_publish(event: Any, ctx: Ctx, app: dict[str, Any], edit: Any 
     await rich.send_rich_message(
         ctx.client,
         event.chat_id,
-        body,
-        title="Visibility",
+        rich.message(body, title="Visibility"),
         buttons=[
             [
                 rich.Btn.callback(
@@ -1145,31 +1154,31 @@ async def _cb_visibility_set(event: Any, payload: dict[str, Any], ctx: Ctx) -> N
         return
 
     await ctx.cache.invalidate("apps:list")
-    title = rich.esc(app.get("title") or "That app")
+    title = rich.bold(app.get("title") or "That app")
     body = (
         f"{title} is published and in the directory now."
         if on
         else f"{title} is back to a draft and out of the directory."
     )
     await rich.send_rich_message(
-        ctx.client, event.chat_id, body, title="Done",
+        ctx.client, event.chat_id, rich.message(body, title="Done"),
         owner_id=event.sender_id, edit=message,
     )
 
 
 async def _confirm_delete(event: Any, ctx: Ctx, app: dict[str, Any], edit: Any = None) -> None:
     owner = event.sender_id
-    title = rich.esc(app.get("title") or "that app")
+    title = rich.bold(app.get("title") or "that app")
     await rich.send_rich_message(
         ctx.client,
         event.chat_id,
-        (
+        rich.message(
             f"Remove {title} from the directory?\n\n"
             "This cannot be undone from here. Taking it back to a draft hides it "
             "just as well and keeps the row, so prefer that unless the app is "
-            "really finished with."
+            "really finished with.",
+            title="Remove an app",
         ),
-        title="Remove an app",
         buttons=[
             [
                 rich.Btn.callback(
@@ -1213,8 +1222,10 @@ async def _cb_delete(event: Any, payload: dict[str, Any], ctx: Ctx) -> None:
     await rich.send_rich_message(
         ctx.client,
         event.chat_id,
-        f"{rich.esc(title or 'That app')} is no longer in the directory.",
-        title="Removed",
+        rich.message(
+            f"{rich.bold(title or 'That app')} is no longer in the directory.",
+            title="Removed",
+        ),
         owner_id=event.sender_id,
         edit=message,
     )

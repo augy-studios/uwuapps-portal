@@ -16,7 +16,7 @@ from ..context import Ctx
 from . import (
     account_button,
     command,
-    command_list_html,
+    command_list,
     donate_button,
     web_app_button,
 )
@@ -31,27 +31,25 @@ INTRO = (
 
 SEARCH_HINT = (
     "You can also just type a name. Anything that is not a command searches the "
-    "directory, so typing <i>wordle</i> finds the app."
+    "directory, so typing *wordle* finds the app."
 )
 
 
-async def start_body(ctx: Ctx, telegram_id: int) -> str:
+async def build_start(ctx: Ctx, telegram_id: int) -> tuple[dict[str, str], list[list[rich.Btn]]]:
     from . import manage
 
     # The management commands are listed for the people who can run them and
     # for nobody else, from the same registry, so the list still cannot drift.
-    commands = command_list_html(
+    commands = command_list(
         include_admin=ctx.is_admin(telegram_id),
         include_manager=await manage.may_manage(ctx, telegram_id),
     )
-    return "\n\n".join([INTRO, "<b>Commands</b>\n" + commands, SEARCH_HINT])
-
-
-async def start_buttons(ctx: Ctx, telegram_id: int) -> list[list[rich.Btn]]:
-    return [
+    body = "\n\n".join([INTRO, "## Commands\n\n" + commands, SEARCH_HINT])
+    buttons = [
         [web_app_button(ctx), donate_button(ctx)],
         [await account_button(ctx, telegram_id)],
     ]
+    return rich.message(body, title="UwU Suite"), buttons
 
 
 @command("start", "See what this is and how to begin", weight=0)
@@ -66,12 +64,12 @@ async def handle_start(event: Any, args: str, ctx: Ctx) -> None:
         return
 
     telegram_id = event.sender_id
+    view, buttons = await build_start(ctx, telegram_id)
     await rich.send_rich_message(
         ctx.client,
         event.chat_id,
-        await start_body(ctx, telegram_id),
-        title="UwU Suite",
-        buttons=await start_buttons(ctx, telegram_id),
+        view,
+        buttons=buttons,
         reply_to=event.message.id,
         owner_id=telegram_id,
     )
@@ -80,11 +78,7 @@ async def handle_start(event: Any, args: str, ctx: Ctx) -> None:
 async def show_start(event: Any, ctx: Ctx) -> None:
     """Used by the fallback reply, so there is one intro rather than two."""
     telegram_id = event.sender_id
+    view, buttons = await build_start(ctx, telegram_id)
     await rich.send_rich_message(
-        ctx.client,
-        event.chat_id,
-        await start_body(ctx, telegram_id),
-        title="UwU Suite",
-        buttons=await start_buttons(ctx, telegram_id),
-        owner_id=telegram_id,
+        ctx.client, event.chat_id, view, buttons=buttons, owner_id=telegram_id
     )

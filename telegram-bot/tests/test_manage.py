@@ -130,7 +130,7 @@ def test_the_management_commands_stay_out_of_the_public_lists():
     listed = {line.split(" - ")[0] for line in handlers.botfather_block().splitlines()}
     for name in ("manage", "add", "edit", "publish", "delete"):
         assert name not in listed
-        assert f"/{name} " not in handlers.command_list_html()
+        assert f"/{name}**" not in handlers.command_list()
 
 
 # --- filling the form ------------------------------------------------------

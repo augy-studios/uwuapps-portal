@@ -102,12 +102,13 @@ def visible_commands(
     ]
 
 
-def command_list_html(
+def command_list(
     *, include_admin: bool = False, include_manager: bool = False
 ) -> str:
-    """The block `/start` renders. One line each, no bot name anywhere."""
+    """The block `/start` renders, as a Rich Markdown bullet list. One line
+    each, no bot name anywhere."""
     lines = [
-        f"/{c.name} {rich.esc('- ' + c.description)}"
+        f"- {rich.bold('/' + c.name)} {rich.escape_md(c.description)}"
         for c in visible_commands(include_admin=include_admin, include_manager=include_manager)
     ]
     return "\n".join(lines)
@@ -284,8 +285,10 @@ async def _apologise(event: Any, ctx: Ctx) -> None:
             await rich.send_rich_message(
                 ctx.client,
                 ctx.config.admin_chat_id,
-                f"A handler raised. Incident {rich.esc(incident)}, see the log file.",
-                title="Error",
+                rich.message(
+                    f"A handler raised. Incident {rich.code(incident)}, see the log file.",
+                    title="Error",
+                ),
             )
         except Exception:
             log.exception("Could not alert the admin chat about incident %s", incident)

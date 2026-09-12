@@ -73,6 +73,10 @@ async def amain() -> int:
         config.api_hash,
         flood_sleep_threshold=config.flood_sleep_threshold,
     )
+    # Structured content goes out as a Rich Message through bot/reply.py, and
+    # everything else is plain text. Telethon would otherwise parse its own
+    # markdown out of every plain send, fallback text included.
+    client.parse_mode = None
 
     ctx = Ctx(
         client=client,

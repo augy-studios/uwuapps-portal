@@ -42,29 +42,38 @@ results, none offers you a way onward rather than a dead end.
 
 ### Sample output
 
+Structured replies go out as Telegram Rich Messages, so the heading, the
+list and the tables render natively on a current client. This is the markdown
+behind `/start`:
+
 ```
-UwU Suite
+# UwU Suite
 
 UwU Suite is a small directory of web apps, games and tools by UwU Apps.
 This chat is a front door to it. Browse what is published, hear about new
 arrivals, and use it as the second step when you sign in to the portal.
 
-Commands
-/start - See what this is and how to begin
-/link - Link this Telegram account to your portal account
-/code - Get a one time code for signing in
-/browse - Browse the published apps
-/about - Read more about UwU Suite
-/whoami - See which portal account is linked here
-/notify - Turn new app announcements on or off
-/status - Check that everything is running
+## Commands
+
+- **/start** See what this is and how to begin
+- **/link** Link this Telegram account to your portal account
+- **/code** Get a one time code for signing in
+- **/browse** Browse the published apps
+- **/about** Read more about UwU Suite
+- **/whoami** See which portal account is linked here
+- **/notify** Turn new app announcements on or off
+- **/status** Check that everything is running
 
 You can also just type a name. Anything that is not a command searches the
-directory, so typing wordle finds the app.
+directory, so typing *wordle* finds the app.
 
 [ Open the web app ] [ Support the project ]
 [ Link my account ]
 ```
+
+Every rich message also carries a plain text reading of the same content,
+which is what an old client shows and what goes out if Telegram rejects the
+rich payload. `/status`, `/stats` and the management form use pipe tables.
 
 ---
 
@@ -325,8 +334,9 @@ the tmux pane stays useful.
 ```
 
 They need no Telegram connection and no portal. They cover the message style
-rules, that no code path can delete a link, that buttons survive a restart, and
-that a hard kill strands no job.
+rules, that a rich message goes out with both halves and falls back to plain
+text when rejected, that no code path can delete a link, that buttons survive
+a restart, and that a hard kill strands no job.
 
 ### The BotFather command list
 
@@ -351,6 +361,7 @@ telegram-bot/
     db.py                       connection, WAL pragmas, migration runner
     context.py                  the object every handler is handed
     rich.py                     send_rich_message, the one outgoing door
+    reply.py                    the raw TL requests that carry a Rich Message
     callbacks.py                persistent inline button registry
     scheduler.py                SQLite backed job loop
     migrations/001_init.sql     the whole local schema

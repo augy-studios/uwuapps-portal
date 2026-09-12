@@ -7,8 +7,8 @@ Ordering is its own axis rather than its own command. `/browse` opens on the
 default order and the sort button under the pager cycles through the five
 orders, which is why the old `/new` is gone: it is now one press away.
 
-Every string that came from the portal is escaped before it reaches a message,
-because app titles and descriptions are user submitted.
+Every string that came from the portal goes through `rich.escape_md` before it
+reaches a message, because app titles and descriptions are user submitted.
 """
 
 from __future__ import annotations
@@ -166,11 +166,11 @@ def trim(text: str, limit: int = DESC_LIMIT) -> str:
 
 def _title_for(mode: str, query: str) -> str:
     if mode == MODE_SEARCH:
-        return f"Results for {query}"
+        return f"Results for {rich.escape_md(query)}"
     return "The app directory"
 
 
-def render_list(
+def build_list(
     ctx: Ctx,
     selected: list[dict[str, Any]],
     *,
@@ -180,27 +180,29 @@ def render_list(
     stale: bool,
     owner_id: int,
     sort: str = SORT_DEFAULT,
-) -> tuple[str, str, list[list[rich.Btn]], str]:
+) -> tuple[dict[str, str], list[list[rich.Btn]]]:
+    """One page of the directory: a heading, numbered entries, a footer line."""
     sort = clean_sort(sort)
     size = ctx.config.page_size
     pages = max(1, (len(selected) + size - 1) // size)
     page = max(0, min(page, pages - 1))
     window = selected[page * size : page * size + size]
 
-    lines: list[str] = []
+    entries: list[str] = []
     for offset, app in enumerate(window, start=1):
         number = page * size + offset
-        title = rich.esc(app.get("title") or "Untitled")
-        entry = f"{number}. <b>{title}</b>"
+        title = rich.bold(f"{number}. {app.get('title') or 'Untitled'}")
         description = trim(app.get("description") or "")
-        if description:
-            entry += f"\n{rich.esc(description)}"
         tags = [str(t) for t in (app.get("tags") or [])]
-        if tags:
-            entry += f"\n<i>{rich.esc(', '.join(tags))}</i>"
-        lines.append(entry)
+        entries.append(
+            rich.lines(
+                title,
+                rich.escape_md(description) if description else "",
+                rich.italic(", ".join(tags)) if tags else "",
+            )
+        )
 
-    body = "\n\n".join(lines) if lines else "Nothing here yet."
+    body = "\n\n".join(entries) if entries else "Nothing here yet."
 
     open_row = [
         rich.Btn.callback(
@@ -245,12 +247,13 @@ def render_list(
                    f", {SORT_PHRASES[sort]}"]
     if stale:
         footer_bits.append(rich.STALE_DATA)
-    footer = "\n".join(footer_bits)
+    footer = rich.lines(*footer_bits)
 
-    return _title_for(mode, query), body, buttons, footer
+    view = rich.message(body, title=_title_for(mode, query), footer=footer)
+    return view, buttons
 
 
-def render_card(
+def build_card(
     ctx: Ctx,
     app: dict[str, Any],
     *,
@@ -259,22 +262,23 @@ def render_card(
     page: int,
     owner_id: int,
     sort: str = SORT_DEFAULT,
-) -> tuple[str, str, list[list[rich.Btn]]]:
-    title = rich.esc(app.get("title") or "Untitled")
+) -> tuple[dict[str, str], list[list[rich.Btn]]]:
+    """One app on its own: the title as the heading, then what it is."""
+    title = rich.escape_md(app.get("title") or "Untitled")
     parts = []
     description = str(app.get("description") or "").strip()
     if description:
-        parts.append(rich.esc(trim(description, 900)))
+        parts.append(rich.escape_md(trim(description, 900)))
 
     meta: list[str] = []
     tags = [str(t) for t in (app.get("tags") or [])]
     if tags:
-        meta.append("Tags: " + rich.esc(", ".join(tags)))
+        meta.append("Tags: " + rich.italic(", ".join(tags)))
     published = app.get("published_date") or ""
     if published:
-        meta.append("Published " + rich.esc(str(published)[:10]))
+        meta.append("Published " + rich.escape_md(str(published)[:10]))
     if meta:
-        parts.append("\n".join(meta))
+        parts.append(rich.lines(*meta))
 
     body = "\n\n".join(parts) if parts else "No description yet."
 
@@ -291,7 +295,7 @@ def render_card(
             )
         ]
     )
-    return title, body, buttons
+    return rich.message(body, title=title), buttons
 
 
 # --- shared entry point ----------------------------------------------------
@@ -326,22 +330,17 @@ async def show_page(
 
     # A single match skips the list and opens the card directly.
     if mode == MODE_SEARCH and len(selected) == 1:
-        title, body, buttons = render_card(
+        view, buttons = build_card(
             ctx, selected[0], mode=mode, query=query, page=0,
             owner_id=owner_id, sort=sort,
         )
-        await rich.send_rich_message(
-            ctx.client, event.chat_id, body, title=title, buttons=buttons,
-            reply_to=reply_id(event), owner_id=owner_id, edit=edit,
+    else:
+        view, buttons = build_list(
+            ctx, selected, mode=mode, query=query, page=page, stale=stale,
+            owner_id=owner_id, sort=sort,
         )
-        return
-
-    title, body, buttons, footer = render_list(
-        ctx, selected, mode=mode, query=query, page=page, stale=stale,
-        owner_id=owner_id, sort=sort,
-    )
     await rich.send_rich_message(
-        ctx.client, event.chat_id, body, title=title, footer=footer, buttons=buttons,
+        ctx.client, event.chat_id, view, buttons=buttons,
         reply_to=reply_id(event), owner_id=owner_id, edit=edit,
     )
 
@@ -351,8 +350,10 @@ async def _no_matches(event: Any, ctx: Ctx, query: str, edit: Any = None) -> Non
     await rich.send_rich_message(
         ctx.client,
         event.chat_id,
-        f"Nothing in the directory matches {rich.esc(query)}.",
-        title="No matches",
+        rich.message(
+            f"Nothing in the directory matches {rich.escape_md(query)}.",
+            title="No matches",
+        ),
         buttons=[
             [
                 rich.Btn.callback(
@@ -380,11 +381,11 @@ async def search(event: Any, query: str, ctx: Ctx) -> None:
         await rich.send_rich_message(
             ctx.client,
             event.chat_id,
-            (
+            rich.message(
                 "That is a little short to search on. Try three characters or "
-                "more, or press the button to browse everything."
+                "more, or press the button to browse everything.",
+                title="A bit more to go on",
             ),
-            title="A bit more to go on",
             buttons=[
                 [
                     rich.Btn.callback(
@@ -472,8 +473,7 @@ async def _cb_open(event: Any, payload: dict[str, Any], ctx: Ctx) -> None:
         await rich.send_rich_message(
             ctx.client,
             event.chat_id,
-            "That app is no longer in the directory.",
-            title="Not found",
+            rich.message("That app is no longer in the directory.", title="Not found"),
             buttons=[
                 [
                     rich.Btn.callback(
@@ -491,7 +491,7 @@ async def _cb_open(event: Any, payload: dict[str, Any], ctx: Ctx) -> None:
         )
         return
 
-    title, body, buttons = render_card(
+    view, buttons = build_card(
         ctx,
         app,
         mode=mode,
@@ -501,6 +501,6 @@ async def _cb_open(event: Any, payload: dict[str, Any], ctx: Ctx) -> None:
         sort=sort,
     )
     await rich.send_rich_message(
-        ctx.client, event.chat_id, body, title=title, buttons=buttons,
+        ctx.client, event.chat_id, view, buttons=buttons,
         owner_id=event.sender_id, edit=message,
     )

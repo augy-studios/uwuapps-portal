@@ -13,6 +13,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from telethon.client.buttons import ButtonMethods
+from telethon.tl import functions, types
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -38,24 +40,77 @@ from bot.services.cache import Cache  # noqa: E402
 
 
 class SentMessage:
-    """Stands in for a Telethon Message well enough for the code under test."""
+    """Stands in for a Telethon Message well enough for the code under test.
+
+    `text` is what an old client would show: the plain text of a notice, or
+    the fallback half of a rich message. `markdown` is the rich half, and is
+    None for a plain notice.
+    """
 
     _next_id = 1000
 
-    def __init__(self, chat_id: int, text: str, buttons: Any, **kwargs: Any) -> None:
+    def __init__(
+        self, chat_id: int, text: str, buttons: Any, markdown: str | None = None, **kwargs: Any
+    ) -> None:
         SentMessage._next_id += 1
         self.id = SentMessage._next_id
         self.chat_id = chat_id
         self.text = text
+        self.markdown = markdown
         self.buttons = buttons
         self.kwargs = kwargs
 
 
+def _rows(markup: Any) -> Any:
+    """The button rows inside a reply markup, or None for no keyboard at all.
+
+    An empty inline keyboard is how a keyboard is removed, and to the tests
+    that reads the same as no buttons.
+    """
+    rows = getattr(markup, "rows", None)
+    if not rows:
+        return None
+    return [list(row.buttons) for row in rows]
+
+
 class FakeClient:
+    """The two high level calls plain notices use, plus the raw request path
+    rich messages take. Both land in `sent` and `edits`, so a test reads one
+    list whichever way the message went."""
+
+    # The real thing is a staticmethod, so the markup a test sees is the
+    # markup Telethon would build.
+    build_reply_markup = staticmethod(ButtonMethods.build_reply_markup)
+
     def __init__(self) -> None:
         self.sent: list[SentMessage] = []
         self.edits: list[tuple[int, int, str, Any]] = []
         self.deleted: list[tuple[int, list[int]]] = []
+        self.requests: list[Any] = []
+        # Set to an exception to make every raw request fail, which is how the
+        # plain fallback path is exercised.
+        self.raw_raises: Exception | None = None
+
+    async def __call__(self, request):
+        self.requests.append(request)
+        if self.raw_raises is not None:
+            raise self.raw_raises
+        markdown = getattr(request.rich_message, "markdown", None)
+        if isinstance(request, functions.messages.SendMessageRequest):
+            reply_to = getattr(request.reply_to, "reply_to_msg_id", None)
+            message = SentMessage(
+                int(request.peer), request.message, _rows(request.reply_markup),
+                markdown=markdown, reply_to=reply_to, link_preview=not request.no_webpage,
+            )
+            self.sent.append(message)
+            return types.UpdateShortSentMessage(id=message.id, pts=0, pts_count=0, date=None)
+        if isinstance(request, functions.messages.EditMessageRequest):
+            rows = _rows(request.reply_markup)
+            self.edits.append((int(request.peer), int(request.id), request.message, rows))
+            message = SentMessage(int(request.peer), request.message, rows, markdown=markdown)
+            message.id = int(request.id)
+            return message
+        raise TypeError(f"The fake client does not handle {type(request).__name__}")
 
     async def send_message(self, entity, text, buttons=None, **kwargs):
         message = SentMessage(int(entity), text, buttons, **kwargs)
@@ -63,6 +118,9 @@ class FakeClient:
         return message
 
     async def edit_message(self, chat_id, message_id, text, buttons=None, **kwargs):
+        # A ReplyMarkup arrives here on the plain path; unwrap it like the raw one
+        if hasattr(buttons, "rows"):
+            buttons = _rows(buttons)
         self.edits.append((int(chat_id), int(message_id), text, buttons))
         message = SentMessage(int(chat_id), text, buttons, **kwargs)
         message.id = int(message_id)
