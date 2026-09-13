@@ -54,6 +54,18 @@
                 }
             } catch (e) {}
             var m = localStorage.getItem(k + ".mode") || "light";
+
+            // Time based mode. Resolved here rather than in theme.js because
+            // theme.js runs after first paint, and an evening reader would
+            // otherwise watch a white page turn dark. Keep the two hours in
+            // step with LIGHT_FROM_HOUR and LIGHT_UNTIL_HOUR in js/theme.js
+            // and with the same script in offline.html.
+            document.documentElement.setAttribute("data-mode-preference", m);
+            if (m === "time") {
+                var h = new Date().getHours();
+                m = h >= 9 && h < 18 ? "light" : "dark";
+            }
+
             var c = localStorage.getItem(k + ".colorTheme") || "classic";
             document.documentElement.setAttribute("data-mode", m);
             document.documentElement.setAttribute("data-color-theme", c);
@@ -585,9 +597,11 @@
             <div class="theme-modal-body">
                 <p class="theme-section-label">Mode</p>
                 <div class="mode-toggle" id="modeToggle">
-                    <button class="mode-btn" type="button" data-mode="light"><span data-icon="sun"></span>Light</button>
-                    <button class="mode-btn" type="button" data-mode="dark"><span data-icon="moon"></span>Dark</button>
+                    <button class="mode-btn" type="button" data-mode="light" aria-pressed="false"><span data-icon="sun"></span>Light</button>
+                    <button class="mode-btn" type="button" data-mode="dark" aria-pressed="false"><span data-icon="moon"></span>Dark</button>
+                    <button class="mode-btn mode-btn-wide" type="button" data-mode="time" aria-pressed="false"><span data-icon="clock"></span>Time-based</button>
                 </div>
+                <p class="mode-note" id="modeNote" hidden></p>
                 <p class="theme-section-label">Brand colour</p>
                 <div class="swatch-grid" id="swatchGrid"></div>
             </div>
@@ -597,7 +611,7 @@
     <script src="/script.js"></script>
 
     <script type="module">
-        import { COLOR_THEMES, applyColorTheme, applyMode, getStoredColorTheme, getStoredMode, initTheme } from "/js/theme.js";
+        import { COLOR_THEMES, applyColorTheme, applyMode, getStoredColorTheme, getStoredMode, getModePreference, initTheme } from "/js/theme.js";
         import { hydrateIcons, openModal, closeModal } from "/js/ui.js";
 
         function buildThemeModal() {
@@ -625,17 +639,34 @@
                 applyMode(btn.dataset.mode);
                 syncThemeModalState();
             });
+
+            // A tab left open across 09:00 or 18:00 re-resolves itself; redraw the
+            // modal so the note and pressed state stay in step with the change.
+            document.addEventListener("uwu:modechange", syncThemeModalState);
         }
 
         function syncThemeModalState() {
             const activeTheme = getStoredColorTheme();
-            const activeMode = getStoredMode();
+            const activePreference = getModePreference();
+            const resolvedMode = getStoredMode();
+
             document.querySelectorAll("#swatchGrid .swatch").forEach((el) => {
                 el.classList.toggle("active", el.dataset.themeId === activeTheme);
             });
             document.querySelectorAll("#modeToggle .mode-btn").forEach((el) => {
-                el.classList.toggle("active", el.dataset.mode === activeMode);
+                const isActive = el.dataset.mode === activePreference;
+                el.classList.toggle("active", isActive);
+                el.setAttribute("aria-pressed", String(isActive));
             });
+
+            const note = document.getElementById("modeNote");
+            if (note) {
+                note.hidden = activePreference !== "time";
+                if (activePreference === "time") {
+                    note.textContent = `Following the clock. Currently ${resolvedMode}.`;
+                }
+            }
+
             updateThemeButtonIcon();
         }
 
@@ -668,11 +699,8 @@
         wireThemeModal();
     </script>
 
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js');
-        }
-    </script>
+    <!-- Registers the service worker and draws the update bar. The only place the worker is registered. -->
+    <script type="module" src="/js/sw-update.js"></script>
 
 </body>
 

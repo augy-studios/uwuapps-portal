@@ -1,4 +1,8 @@
-const CACHE_VERSION = "uwusuite-v12";
+// Bump this on every deploy that changes anything the worker serves. The
+// browser compares this file byte for byte, so if nothing here changes there
+// is no update to prompt about, however much else in the site has moved.
+// See update-bar-spec.md at the repo root.
+const CACHE_VERSION = "uwusuite-v13";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const OFFLINE_URL = "/offline.html";
@@ -11,6 +15,7 @@ const STATIC_ASSETS = [
   "/js/theme.js",
   "/js/icons.js",
   "/js/ui.js",
+  "/js/sw-update.js",
   "/UUS-main.png",
   "/UUS-512.png",
   "/UUS-192.png",
@@ -19,15 +24,16 @@ const STATIC_ASSETS = [
   OFFLINE_URL
 ];
 
-// Install
+// Install. No skipWaiting() here: a new worker downloads, installs, and then
+// waits. The only thing that promotes it is a person pressing Reload on the
+// update bar, which arrives as the "skip-waiting" message below.
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => cache.addAll(STATIC_ASSETS))
   );
-  self.skipWaiting();
 });
 
-// Activate
+// Activate. No clients.claim() here either, for the same reason.
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -38,7 +44,16 @@ self.addEventListener("activate", (event) => {
       )
     )
   );
-  self.clients.claim();
+});
+
+// The one message the page sends, once somebody has accepted the update.
+self.addEventListener("message", (event) => {
+  const type = typeof event.data === "string" ? event.data : event.data?.type;
+
+  // The only place either of these is ever called.
+  if (type === "skip-waiting") {
+    event.waitUntil(self.skipWaiting().then(() => self.clients.claim()));
+  }
 });
 
 // Fetch, Offline Support

@@ -147,14 +147,14 @@ body {
 
 /* ---- mode toggle ---- */
 .mode-toggle {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 6px;
   padding: 4px;
   border-radius: 14px;
   background: var(--surface);
 }
 .mode-btn {
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -169,6 +169,17 @@ body {
 .mode-btn.active {
   background: color-mix(in srgb, var(--brand) 55%, var(--surface-strong));
   color: var(--brand-ink);
+}
+
+/* Time based mode. Light and dark stay side by side and the third spans the
+   row beneath them: two equal columns would put the longer label in a box
+   too narrow to read at 320px, and the full width row also signals this is
+   a different kind of choice, a rule for picking a mode rather than a mode. */
+.mode-btn-wide { grid-column: 1 / -1; }
+.mode-note {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
 /* ---- swatch grid ---- */
@@ -1355,6 +1366,50 @@ body.modal-open { overflow: hidden; }
   padding: 2rem;
   color: var(--muted);
   font-size: .9rem;
+}
+
+/* ── Update bar
+   Drawn by js/sw-update.js at the top of <body> when a new worker is waiting.
+   Full width, quieter than the header, tinted enough to read as a notice. */
+.update-notice {
+  position: relative;
+  z-index: 2;
+  background: color-mix(in srgb, var(--brand-ink) 12%, transparent);
+  border-bottom: 1px solid var(--surface-border);
+  color: var(--ink);
+  font-size: .875rem;
+}
+
+.update-notice-inner {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: .5rem 1.5rem;
+  /* Under the notch on a phone, where the bar is the topmost thing on screen. */
+  padding-top: max(.5rem, env(safe-area-inset-top));
+}
+
+.update-notice p {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.update-notice .btn {
+  flex: none;
+}
+
+@media (max-width: 480px) {
+  .update-notice-inner {
+    flex-wrap: wrap;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .update-notice p {
+    flex-basis: 100%;
+  }
 }
 
 /* ── Toast */

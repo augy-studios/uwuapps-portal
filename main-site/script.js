@@ -1050,10 +1050,8 @@ document.addEventListener('keydown', e => {
         document.querySelectorAll('.modal-backdrop:not(.hidden)').forEach(m => m.classList.add('hidden'));
 });
 
-/* PWA */
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
-}
+/* PWA: the service worker is registered by js/sw-update.js, which also owns
+   the update bar. Do not register it here as well. */
 
 /* =========================================================
    SETTINGS TAB, Telegram linking and the second factor
