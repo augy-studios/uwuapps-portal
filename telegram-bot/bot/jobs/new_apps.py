@@ -25,19 +25,55 @@ async def refresh(payload: dict[str, Any], ctx: Ctx) -> None:
     log.info("Refreshed the app list, %d published apps", len(apps))
 
 
+def gallery(app: dict[str, Any]) -> list[str]:
+    """The listing's images, the thumbnail first and the rest in gallery order.
+
+    Reads the columns the way the site does: the gallery when there is one,
+    otherwise the lone thumbnail an older row may still carry.
+    """
+    urls = [str(u) for u in (app.get("gallery_urls") or []) if u]
+    if not urls and app.get("thumbnail_url"):
+        urls = [str(app["thumbnail_url"])]
+    if not urls:
+        return []
+    try:
+        start = int(app.get("thumbnail_index") or 0)
+    except (TypeError, ValueError):
+        start = 0
+    start = max(0, min(start, len(urls) - 1))
+    ordered = [urls[start], *urls[:start], *urls[start + 1:]]
+    return list(dict.fromkeys(u for u in ordered if u.startswith(("http://", "https://"))))
+
+
 def build_announcement(app: dict[str, Any]) -> tuple[dict[str, str], list[list[rich.Btn]]]:
+    title = app.get("title") or "Untitled"
     description = apps_handler.trim(app.get("description") or "")
     body = rich.lines(
-        rich.bold(app.get("title") or "Untitled"),
+        rich.bold(title),
         rich.escape_md(description) if description else "",
     )
     buttons: list[list[rich.Btn]] = []
     url = str(app.get("url") or "")
     if url.startswith(("http://", "https://")):
         buttons.append([rich.Btn.link("Open the app", url)])
-    view = rich.message(
-        body, title="New in the directory", footer="Turn these off any time with /notify."
-    )
+
+    def compose(images: list[str]) -> dict[str, str]:
+        return rich.message(
+            "\n\n".join([body, *images]),
+            title="New in the directory",
+            footer="Turn these off any time with /notify.",
+        )
+
+    # Images go in one at a time while the message still fits, because one
+    # that does not fit goes out as plain text and would lose them all.
+    images: list[str] = []
+    view = compose(images)
+    for number, image_url in enumerate(gallery(app), start=1):
+        candidate = [*images, rich.image(image_url, f"{title}, image {number}")]
+        composed = compose(candidate)
+        if len(composed["markdown"]) > rich.TELEGRAM_LIMIT:
+            break
+        images, view = candidate, composed
     return view, buttons
 
 

@@ -37,6 +37,7 @@ import logging
 import re
 from dataclasses import dataclass
 from typing import Any, Iterable, Sequence
+from urllib.parse import quote
 
 from telethon import Button, utils
 from telethon.errors import FloodWaitError, MessageNotModifiedError
@@ -72,6 +73,9 @@ def configure(registry: Any, scheduler: Any = None) -> None:
 # --- escaping --------------------------------------------------------------
 
 _MD_SPECIAL = re.compile(r"([\\*_~`|\[\]#>=])")
+# Reserved URL characters kept as they are, minus the parentheses, which would
+# close a Markdown link destination. `%` stays so an encoded URL is not doubled.
+_URL_SAFE = ":/?#[]@!$&'*+,;=%~"
 
 
 def escape_md(text: Any) -> str:
@@ -96,6 +100,16 @@ def code(value: Any) -> str:
     """An inline code span. Backslash escapes do not work inside one, so a
     backtick in the value is replaced rather than escaped."""
     return "`" + str(value if value is not None else "").replace("`", "'") + "`"
+
+
+def image(url: Any, alt: Any = "") -> str:
+    """An inline image, fetched and embedded by Telegram itself. Only http(s)
+    is allowed, and a space or bracket in the URL is percent encoded so it
+    cannot end the link early. Give it a paragraph of its own."""
+    target = str(url or "").strip()
+    if not target.startswith(("http://", "https://")):
+        return ""
+    return f"![{escape_md(alt)}]({quote(target, safe=_URL_SAFE)})"
 
 
 def lines(*parts: str) -> str:
@@ -123,6 +137,7 @@ _CELL_SPLIT = re.compile(r"(?<!\\)\|")
 _SEPARATOR = re.compile(r"^:?-{3,}:?$")
 _HEADING = re.compile(r"^#{1,6}\s+")
 _QUOTE = re.compile(r"^>\s?")
+_IMAGE = re.compile(r"^!\[(?:\\.|[^\]\\])*\]\([^\s)]*\)$")
 
 
 def _unmark(text: str) -> str:
@@ -163,9 +178,11 @@ def plain(markdown: str) -> str:
 
     Exact rather than approximate, because the only markup in the input is the
     markup authored here, and every piece of data went through `escape_md`.
+    An image has no plain reading, so its paragraph is dropped whole.
     """
     out: list[str] = []
     block: list[str] = []
+    after_image = False
 
     def flush() -> None:
         if block:
@@ -178,6 +195,12 @@ def plain(markdown: str) -> str:
             block.append(line)
             continue
         flush()
+        if _IMAGE.match(line):
+            after_image = True
+            continue
+        if after_image and not line and (not out or not out[-1]):
+            continue
+        after_image = False
         line = _HEADING.sub("", line)
         line = _QUOTE.sub("", line)
         out.append(_unmark(line))

@@ -90,6 +90,28 @@ def test_a_builder_may_hand_in_its_own_fallback():
     assert view["fallback"] == "the plain reading"
 
 
+def test_an_image_is_markdown_image_syntax_with_a_safe_url():
+    assert rich.image("https://img.test/a.png", "Wordle [1]") == (
+        "![Wordle \\[1\\]](https://img.test/a.png)"
+    )
+    assert rich.image("https://img.test/my shot (2).png") == (
+        "![](https://img.test/my%20shot%20%282%29.png)"
+    )
+    assert rich.image("https://img.test/a%20b.png?w=1&h=2") == (
+        "![](https://img.test/a%20b.png?w=1&h=2)"
+    )
+    assert rich.image("javascript:alert(1)") == ""
+    assert rich.image(None) == ""
+
+
+def test_the_fallback_drops_image_paragraphs_without_leaving_a_gap():
+    markdown = "\n\n".join(
+        ["# New", "**Wordle**", rich.image("https://img.test/1.png", "one"),
+         rich.image("https://img.test/2.png", "two"), "Footer"]
+    )
+    assert rich.plain(markdown) == "New\n\nWordle\n\nFooter"
+
+
 def test_hard_line_breaks_join_lines_inside_a_block():
     assert rich.lines("a", "", "b") == "a  \nb"
 
