@@ -2,7 +2,7 @@
 // browser compares this file byte for byte, so if nothing here changes there
 // is no update to prompt about, however much else in the site has moved.
 // See update-bar-spec.md at the repo root.
-const CACHE_VERSION = "uwusuite-v15";
+const CACHE_VERSION = "uwusuite-v16";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const OFFLINE_URL = "/offline.html";
@@ -27,9 +27,16 @@ const STATIC_ASSETS = [
 // Install. No skipWaiting() here: a new worker downloads, installs, and then
 // waits. The only thing that promotes it is a person pressing Reload on the
 // update bar, which arrives as the "skip-waiting" message below.
+//
+// Every asset is fetched with cache: "reload", straight from the network. A
+// plain addAll() goes through the browser's HTTP cache, which can still hold
+// the previous deploy's script.js while "/" is already new, and the worker
+// would then serve that mismatched pair on every load until the next bump.
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => cache.addAll(STATIC_ASSETS))
+    caches.open(STATIC_CACHE).then((cache) =>
+      cache.addAll(STATIC_ASSETS.map((url) => new Request(url, { cache: "reload" })))
+    )
   );
 });
 
