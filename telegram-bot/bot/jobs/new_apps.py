@@ -53,9 +53,9 @@ def build_announcement(app: dict[str, Any]) -> tuple[dict[str, str], list[list[r
         rich.escape_md(description) if description else "",
     )
     buttons: list[list[rich.Btn]] = []
-    url = str(app.get("url") or "")
-    if url.startswith(("http://", "https://")):
-        buttons.append([rich.Btn.link("Open the app", url)])
+    links = apps_handler.link_row(app)
+    if links:
+        buttons.append(links)
 
     def compose(images: list[str]) -> dict[str, str]:
         return rich.message(

@@ -1046,6 +1046,17 @@ body.modal-open { overflow: hidden; }
   gap: .35rem;
 }
 
+/* Open App, plus Install App on apps tagged "app" with a release link */
+.app-modal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+}
+
+.app-modal-links .btn {
+  flex: 1 1 10rem;
+}
+
 .app-modal-updated {
   font-size: .8rem;
   color: var(--muted);

@@ -116,6 +116,12 @@ function tagClass(tag) {
     } [tag] || '';
 }
 
+/* The Install App link, only on apps tagged "app" and only for http(s) links */
+function releaseUrlOf(app) {
+    const url = app?.release_url || '';
+    return (app?.tags || []).includes('app') && /^https?:\/\//i.test(url) ? url : '';
+}
+
 function formatDate(iso) {
     return new Date(iso).toLocaleDateString('en-SG', {
         day: 'numeric',
@@ -526,6 +532,9 @@ function openAppModal(app) {
     $('appModalTitle').textContent = app.title;
     $('appModalDesc').textContent = app.description || '';
     $('appModalLink').href = app.url;
+    const releaseUrl = releaseUrlOf(app);
+    $('appModalInstall').href = releaseUrl || '#';
+    $('appModalInstall').classList.toggle('hidden', !releaseUrl);
 
     const updatedAt = app.updated_at || app.created_at;
     $('appModalUpdated').textContent = updatedAt ? `Last Updated: ${formatDate(updatedAt)}` : '';
@@ -618,12 +627,22 @@ function openEditModal(app) {
     $('editPublished').checked = app?.published ?? false;
     $('editPublishedDate').value = app?.published_date ? app.published_date.split('T')[0] : '';
     document.querySelectorAll('[name="tag"]').forEach(cb => cb.checked = (app?.tags || []).includes(cb.value));
+    $('editReleaseUrl').value = app?.release_url || '';
+    syncReleaseUrlRow();
     galleryFiles = [];
     galleryUrls = app?.gallery_urls ? [...app.gallery_urls] : [];
     selectedThumbIndex = app?.thumbnail_index ?? 0;
     renderGalleryPicker();
     openModal('editModal');
 }
+
+/* The release link field shows only while the App tag is ticked */
+const appTagBox = document.querySelector('[name="tag"][value="app"]');
+
+function syncReleaseUrlRow() {
+    $('editReleaseUrlRow').classList.toggle('hidden', !appTagBox.checked);
+}
+appTagBox.addEventListener('change', syncReleaseUrlRow);
 
 /* Drop zone */
 const dropZone = $('dropZone');
@@ -775,6 +794,7 @@ $('editForm').addEventListener('submit', async e => {
             url,
             description: $('editDesc').value.trim() || null,
             tags,
+            releaseUrl: tags.includes('app') ? $('editReleaseUrl').value.trim() || null : null,
             galleryUrls: finalGallery,
             thumbnailIndex: thumbIdx,
             published: $('editPublished').checked,

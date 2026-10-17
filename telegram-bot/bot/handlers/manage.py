@@ -90,6 +90,9 @@ FIELDS: tuple[Field, ...] = (
           hint="A sentence or two about what it does."),
     Field("tags", "Tags", "tags",
           hint="Press a tag to turn it on or off."),
+    Field("release_url", "Release link", "url", limit=URL_LIMIT,
+          hint="The page for the latest native release, for example a GitHub "
+               "releases/latest link. Shown as an Install button."),
     Field("image", "Cover image", "url", limit=URL_LIMIT,
           hint="A link to the picture shown on the card."),
     Field("published_date", "Published date", "date",
@@ -99,6 +102,10 @@ FIELDS: tuple[Field, ...] = (
 )
 
 BY_KEY = {f.key: f for f in FIELDS}
+
+# Fields that only mean something on an app carrying a given tag. The portal
+# clears release_url when the "app" tag comes off, so the form hides it too.
+TAG_GATED = {"release_url": "app"}
 
 
 @dataclass
@@ -119,6 +126,10 @@ class Draft:
 
     def missing(self) -> list[Field]:
         return [f for f in FIELDS if f.required and not self.fields.get(f.key)]
+
+    def visible(self) -> list[Field]:
+        tags = set(self.fields.get("tags") or [])
+        return [f for f in FIELDS if f.key not in TAG_GATED or TAG_GATED[f.key] in tags]
 
     def set(self, key: str, value: Any) -> None:
         self.fields[key] = value
@@ -141,6 +152,8 @@ class Draft:
             out["description"] = self.fields.get("description") or ""
         if "tags" in keys:
             out["tags"] = list(self.fields.get("tags") or [])
+        if "release_url" in keys:
+            out["releaseUrl"] = self.fields.get("release_url") or ""
         if "published_date" in keys:
             out["publishedDate"] = self.fields.get("published_date") or ""
         if "sort_order" in keys:
@@ -269,9 +282,10 @@ def build_form(
     """The form: one table row per field, then the buttons that change them."""
     owner = draft.telegram_id
     state = "Published" if draft.fields.get("published") else "Kept as a draft"
+    fields = draft.visible()
     body = rich.table(
         ["Value"],
-        [*((f.label, _shown(draft, f)) for f in FIELDS), ("Visibility", state)],
+        [*((f.label, _shown(draft, f)) for f in fields), ("Visibility", state)],
         corner="Field",
     )
     if note:
@@ -283,7 +297,7 @@ def build_form(
         body += f"\n\nStill needed before this can be saved: {rich.escape_md(names)}."
 
     rows: list[list[rich.Btn]] = []
-    pairs = [FIELDS[i:i + 2] for i in range(0, len(FIELDS), 2)]
+    pairs = [fields[i:i + 2] for i in range(0, len(fields), 2)]
     for pair in pairs:
         rows.append(
             [
@@ -775,6 +789,7 @@ def draft_from_app(telegram_id: int, app: dict[str, Any]) -> Draft:
             "url": app.get("url") or "",
             "description": app.get("description") or "",
             "tags": [str(t) for t in (app.get("tags") or [])],
+            "release_url": app.get("release_url") or "",
             "image": app.get("thumbnail_url") or (gallery[0] if gallery else ""),
             "gallery": gallery,
             "published_date": str(app.get("published_date") or "")[:10],

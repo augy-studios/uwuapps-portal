@@ -253,6 +253,25 @@ def build_list(
     return view, buttons
 
 
+def release_url(app: dict[str, Any]) -> str:
+    """The latest release link, only on an app tagged "app"."""
+    url = str(app.get("release_url") or "")
+    tags = [str(t) for t in (app.get("tags") or [])]
+    return url if "app" in tags and url.startswith(("http://", "https://")) else ""
+
+
+def link_row(app: dict[str, Any]) -> list[rich.Btn]:
+    """Open the app, and install it where there is a native release."""
+    row: list[rich.Btn] = []
+    url = str(app.get("url") or "")
+    if url.startswith(("http://", "https://")):
+        row.append(rich.Btn.link("Open the app", url))
+    release = release_url(app)
+    if release:
+        row.append(rich.Btn.link("Install the app", release))
+    return row
+
+
 def build_card(
     ctx: Ctx,
     app: dict[str, Any],
@@ -283,9 +302,9 @@ def build_card(
     body = "\n\n".join(parts) if parts else "No description yet."
 
     buttons: list[list[rich.Btn]] = []
-    url = str(app.get("url") or "")
-    if url.startswith(("http://", "https://")):
-        buttons.append([rich.Btn.link("Open the app", url)])
+    links = link_row(app)
+    if links:
+        buttons.append(links)
     buttons.append(
         [
             rich.Btn.callback(

@@ -31,7 +31,7 @@ export default async function handler(req, res) {
                 let query = supabase
                     .from('uwusuite_apps')
                     .select(`
-            id, title, description, url, tld, tags,
+            id, title, description, url, tld, tags, release_url,
             thumbnail_url, gallery_urls, thumbnail_index,
             published, sort_order, access_count,
             created_by, created_at, updated_at, published_date

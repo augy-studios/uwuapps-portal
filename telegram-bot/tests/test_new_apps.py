@@ -62,6 +62,23 @@ def test_the_images_sit_inline_after_the_description():
     assert buttons[0][0].target == "https://wordle.test"
 
 
+def test_an_app_with_a_release_gets_an_install_button_beside_open():
+    app = _app(tags=["app"], release_url="https://github.test/releases/latest")
+    _, buttons = new_apps.build_announcement(app)
+    assert [b.target for b in buttons[0]] == [
+        "https://wordle.test", "https://github.test/releases/latest",
+    ]
+
+
+def test_a_release_link_without_the_app_tag_is_ignored():
+    for app in (
+        _app(tags=["games"], release_url="https://github.test/releases/latest"),
+        _app(tags=["app"], release_url="javascript:alert(1)"),
+    ):
+        _, buttons = new_apps.build_announcement(app)
+        assert [b.target for b in buttons[0]] == ["https://wordle.test"]
+
+
 def test_no_gallery_reads_as_before():
     view, _ = new_apps.build_announcement(_app())
     assert "![" not in view["markdown"]

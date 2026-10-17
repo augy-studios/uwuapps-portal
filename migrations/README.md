@@ -7,6 +7,7 @@ Supabase SQL editor, in number order, once.
 | --- | --- |
 | [002_telegram_mfa.sql](002_telegram_mfa.sql) | Telegram account linking and the second factor tables |
 | [003_app_tag.sql](003_app_tag.sql) | Allows the `app` tag on `uwusuite_apps` |
+| [004_app_release_url.sql](004_app_release_url.sql) | Adds `release_url`, the latest release link for apps tagged `app` |
 
 The base schema (`uwusuite_users`, `uwusuite_apps`, `uwusuite_sessions` and the
 rest) predates this folder and has no file here.

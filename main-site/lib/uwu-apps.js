@@ -26,6 +26,21 @@ export function normalizeTags(tags) {
 }
 
 /**
+ * The latest release link, or null. It goes straight into an href, so only
+ * http and https get through, and it only means anything on an app tagged
+ * "app", so any other app stores null whatever was sent.
+ */
+function releaseUrlFor(releaseUrl, tags) {
+    if (!tags.includes('app')) return null;
+    const value = typeof releaseUrl === 'string' ? releaseUrl.trim() : '';
+    if (!value) return null;
+    if (!/^https?:\/\//i.test(value)) {
+        throw { status: 400, message: 'The release link must start with http:// or https://' };
+    }
+    return value;
+}
+
+/**
  * The three gallery columns move together, always. The thumbnail is an index
  * into the gallery rather than a free standing URL, so it cannot point at an
  * image the gallery no longer holds.
@@ -44,16 +59,18 @@ function galleryColumns(galleryUrls, thumbnailIndex) {
 export function buildCreate(body, userId) {
     const {
         title, url, description, tags, galleryUrls, thumbnailIndex,
-        published, sortOrder, publishedDate
+        published, sortOrder, publishedDate, releaseUrl
     } = body || {};
 
     if (!title || !url) throw { status: 400, message: 'title and url are required' };
 
+    const tagList = normalizeTags(tags);
     return {
         title,
         url,
         description: description || null,
-        tags: normalizeTags(tags),
+        tags: tagList,
+        release_url: releaseUrlFor(releaseUrl, tagList),
         ...galleryColumns(galleryUrls, thumbnailIndex),
         published: !!published,
         sort_order: typeof sortOrder === 'number' ? sortOrder : 0,
@@ -71,7 +88,7 @@ export function buildCreate(body, userId) {
 export function buildPatch(body, userId) {
     const {
         title, url, description, tags, galleryUrls, thumbnailIndex,
-        published, sortOrder, publishedDate
+        published, sortOrder, publishedDate, releaseUrl
     } = body || {};
 
     const patch = { updated_by: userId };
@@ -79,6 +96,11 @@ export function buildPatch(body, userId) {
     if (url !== undefined) patch.url = url;
     if (description !== undefined) patch.description = description || null;
     if (tags !== undefined) patch.tags = normalizeTags(tags);
+    // Without the tags in hand, a release link alone is taken as meant for an
+    // app; the row's own tags are not read here. Dropping the "app" tag always
+    // clears the link.
+    if (releaseUrl !== undefined) patch.release_url = releaseUrlFor(releaseUrl, patch.tags || ['app']);
+    else if (patch.tags && !patch.tags.includes('app')) patch.release_url = null;
     if (published !== undefined) patch.published = !!published;
     if (sortOrder !== undefined) patch.sort_order = sortOrder;
     if (publishedDate !== undefined) patch.published_date = publishedDate || null;

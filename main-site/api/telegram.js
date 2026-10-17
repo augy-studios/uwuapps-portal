@@ -492,7 +492,7 @@ export default async function handler(req, res) {
                 const { data, error } = await supabase
                     .from('uwusuite_apps')
                     .select(`
-                        id, title, description, url, tags,
+                        id, title, description, url, tags, release_url,
                         thumbnail_url, gallery_urls, thumbnail_index,
                         published, sort_order, created_by, created_at, published_date
                     `)

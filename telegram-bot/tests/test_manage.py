@@ -367,6 +367,31 @@ async def test_a_new_app_carries_every_field_and_is_a_draft_unless_published(ctx
     assert payload["published"] is False
 
 
+def test_the_release_link_shows_on_the_form_only_with_the_app_tag():
+    draft = manage_handler.Draft(telegram_id=EDITOR)
+    draft.set("tags", ["tools"])
+    assert "release_url" not in [f.key for f in draft.visible()]
+
+    draft.set("tags", ["tools", "app"])
+    assert "release_url" in [f.key for f in draft.visible()]
+    view, _ = manage_handler.build_form(draft)
+    assert "Release link" in view["markdown"]
+
+
+async def test_a_release_link_is_sent_as_release_url(ctx):
+    await _as(ctx)
+    draft = await _open_form(ctx)
+    draft.set("title", "Tip Splitter")
+    draft.set("url", "https://tips.test")
+    draft.set("tags", ["app"])
+    draft.set("release_url", "https://github.test/releases/latest")
+
+    await _save(ctx, draft)
+
+    call = next(c for c in ctx.portal.calls if c[0] == "create_app")
+    assert call[1][1]["releaseUrl"] == "https://github.test/releases/latest"
+
+
 async def test_saving_clears_the_draft_and_the_cached_directory(ctx):
     await _as(ctx)
     await ctx.cache.write("apps:list", [], 900)
