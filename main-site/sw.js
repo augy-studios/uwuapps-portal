@@ -2,7 +2,7 @@
 // browser compares this file byte for byte, so if nothing here changes there
 // is no update to prompt about, however much else in the site has moved.
 // See update-bar-spec.md at the repo root.
-const CACHE_VERSION = "uwusuite-v14";
+const CACHE_VERSION = "uwusuite-v15";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const OFFLINE_URL = "/offline.html";
