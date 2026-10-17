@@ -143,7 +143,7 @@ Nothing about linking or the second factor works until this is deployed. The bot
 can redeem a linking code but can never mint one, because minting takes a signed
 in portal session.
 
-**a. Run the schema.** Paste [main-site/sql/002_telegram_mfa.sql](../main-site/sql/002_telegram_mfa.sql)
+**a. Run the schema.** Paste [migrations/002_telegram_mfa.sql](../migrations/002_telegram_mfa.sql)
 into the Supabase SQL editor and run it. Every statement is guarded, so running
 it twice is safe.
 

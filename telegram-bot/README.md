@@ -380,8 +380,8 @@ telegram-bot/
 
 The portal side of this lives in [../main-site/](../main-site/):
 `api/telegram.js`, `api/auth/magic.js`, the `login` change in `api/auth.js`, the
-Settings tab in `index.html` and `script.js`, and the schema in
-`sql/002_telegram_mfa.sql`.
+Settings tab in `index.html` and `script.js`. The schema is in
+[../migrations/002_telegram_mfa.sql](../migrations/002_telegram_mfa.sql).
 
 ## Licence
 

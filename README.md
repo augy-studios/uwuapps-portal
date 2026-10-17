@@ -12,6 +12,7 @@ UwU Suite is a browsable directory of web apps built by [Augy Studios](https://g
 | --- | --- |
 | [main-site/](main-site/) | The portal itself. A static PWA plus Vercel serverless functions backed by Supabase. |
 | [telegram-bot/](telegram-bot/) | A Telethon based Telegram bot that fronts the portal, and the second factor behind portal sign ins. |
+| [migrations/](migrations/) | SQL for the Supabase database, run by hand in the SQL editor. See [migrations/README.md](migrations/README.md). |
 
 ### [main-site/](main-site/)
 
@@ -31,7 +32,7 @@ A Telegram bot that lets people browse the directory, link their portal account,
 
 Read [telegram-bot/README.md](telegram-bot/README.md) for what it does, and [telegram-bot/SETUP.md](telegram-bot/SETUP.md) for BotFather, the VPS, and the portal side changes that linking depends on.
 
-The portal half lives in [main-site/](main-site/): [api/telegram.js](main-site/api/telegram.js), [api/auth/magic.js](main-site/api/auth/magic.js), the Settings tab in the Admin Panel, and the schema in [sql/002_telegram_mfa.sql](main-site/sql/002_telegram_mfa.sql).
+The portal half lives in [main-site/](main-site/): [api/telegram.js](main-site/api/telegram.js), [api/auth/magic.js](main-site/api/auth/magic.js), and the Settings tab in the Admin Panel. Its schema is in [migrations/002_telegram_mfa.sql](migrations/002_telegram_mfa.sql).
 
 ---
 
@@ -46,7 +47,7 @@ npm install          # only needed for the serverless functions
 npx vercel dev       # serves the site and the /api routes together
 ```
 
-The API functions expect `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, and `ALLOWED_ORIGINS` in the environment. Environment files are git ignored, so copy the values from the Vercel project rather than committing them.
+The API functions read their environment from the Vercel project. Every key is listed, with where to find it, in [main-site/.env.example](main-site/.env.example). Copy it to `main-site/.env` for `vercel dev`; `.env` is git ignored.
 
 ---
 

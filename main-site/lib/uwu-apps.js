@@ -9,8 +9,11 @@
 // Nothing in here touches Supabase or a session. It takes a request body and a
 // user id and returns a plain row, which is what makes it safe to call from
 // either handler and easy to reason about.
+//
+// ALLOWED_TAGS is also enforced by the uwusuite_apps_tags_chk constraint, so a
+// new tag needs a migration in /migrations as well as this list and the bot's.
 
-export const ALLOWED_TAGS = ['tools', 'games', 'bots', 'singapore'];
+export const ALLOWED_TAGS = ['tools', 'games', 'bots', 'app', 'singapore'];
 
 /** The tag list, or a 400 naming the ones that are not allowed. */
 export function normalizeTags(tags) {

@@ -111,6 +111,7 @@ function tagClass(tag) {
         tools: 'pill-tools',
         games: 'pill-games',
         bots: 'pill-bots',
+        app: 'pill-app',
         singapore: 'pill-singapore'
     } [tag] || '';
 }

@@ -541,6 +541,7 @@ body {
 .pill.pill-tools,
 .pill.pill-games,
 .pill.pill-bots,
+.pill.pill-app,
 .pill.pill-draft {
   background: var(--surface-strong);
   border-color: var(--surface-border);

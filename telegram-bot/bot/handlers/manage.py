@@ -45,7 +45,8 @@ log = logging.getLogger("uwu.handlers.manage")
 # The tag vocabulary the portal accepts. Kept in step with ALLOWED_TAGS in
 # main-site/lib/uwu-apps.js: a tag missing from that list is refused on save,
 # so offering one here that is not there would be a button that always fails.
-ALLOWED_TAGS = ("tools", "games", "bots", "singapore")
+# The database enforces the same list in uwusuite_apps_tags_chk (see /migrations).
+ALLOWED_TAGS = ("tools", "games", "bots", "app", "singapore")
 
 PICK_PAGE_SIZE = 6
 TITLE_LIMIT = 120
